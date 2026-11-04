@@ -9,7 +9,7 @@
 
 use thiserror::Error;
 
-use rayon::{ThreadPool, ThreadPoolBuilder};
+use crate::par::{ThreadPool, ThreadPoolBuilder};
 use std::sync::Arc;
 
 use crate::api::{ChromaSampling, Context, ContextInner, PixelRange};
@@ -140,9 +140,6 @@ pub struct Config {
   pub(crate) threads: usize,
   /// Shared thread pool
   pub(crate) pool: Option<Arc<ThreadPool>>,
-  #[cfg(feature = "unstable")]
-  /// Number of parallel encoding slots
-  pub(crate) slots: usize,
 }
 
 impl Config {
@@ -190,13 +187,6 @@ impl Config {
   /// It takes priority over `with_threads()`
   pub fn with_thread_pool(mut self, pool: Arc<ThreadPool>) -> Self {
     self.pool = Some(pool);
-    self
-  }
-
-  #[cfg(feature = "unstable")]
-  /// Set the maximum number of GOPs to encode in parallel
-  pub const fn with_parallel_gops(mut self, slots: usize) -> Self {
-    self.slots = slots;
     self
   }
 }
@@ -279,7 +269,7 @@ impl Config {
   /// # Examples
   ///
   /// ```
-  /// use rav1e::prelude::*;
+  /// use rav1r::prelude::*;
   ///
   /// # fn main() -> Result<(), InvalidConfig> {
   /// let cfg = Config::default();

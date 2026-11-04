@@ -1,188 +1,141 @@
-# rav1e [![Actions Status][actions badge]][actions] [![CodeCov][codecov badge]][codecov]
+<div align="center">
 
-The fastest and safest AV1 encoder.
+# rav1r
 
-<details>
-<summary><b>Table of Content</b></summary>
+<h3>AV1 encoder in Rust, derived from rav1e.</h3>
 
-- [Overview](#overview)
-- [Features](#features)
-- [Documentation](#documentation)
-- [Releases](#releases)
-- [Building](#building)
-  - [Dependency: NASM](#dependency-nasm)
-  - [Release binary](#release-binary)
-  - [Unstable features](#unstable-features)
-  - [Target-specific builds](#target-specific-builds)
-  - [Building the C-API](#building-the-c-api)
-- [Usage](#usage)
-  - [Compressing video](#compressing-video)
-  - [Decompressing video](#decompressing-video)
-  - [Configuring](#configuring)
-    - [Features](#features-1)
-- [Contributing](#contributing)
-- [Getting in Touch](#getting-in-touch)
-</details>
+<p>
+rav1r keeps the rav1e encoder library and drops the command-line tools, the C API, and the stale dependencies. The default build is pure Rust.
+</p>
 
-## Overview
-rav1e is an AV1 video encoder. It is designed to eventually cover all use cases, though in its current form it is most suitable for cases where libaom (the reference encoder) is too slow.
+<p>
+  <a href="#origin"><strong>Origin</strong></a>
+  ·
+  <a href="#what-changed"><strong>What changed</strong></a>
+  ·
+  <a href="#features"><strong>Features</strong></a>
+  ·
+  <a href="#usage"><strong>Usage</strong></a>
+  ·
+  <a href="#taking-upstream-fixes"><strong>Upstream fixes</strong></a>
+  ·
+  <a href="#license-and-patents"><strong>License</strong></a>
+</p>
+
+<p>
+  <a href="https://discord.gg/jBhFk9kHPg">
+    <img src="https://img.shields.io/discord/1453357769720594543?label=Discord&logo=discord&logoColor=white&color=5865F2" alt="Join the Discord">
+  </a>
+</p>
+
+<p>
+  <a href="https://github.com/ml-rust/rav1r/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/ml-rust/rav1r/ci.yml?branch=master&label=ci" alt="CI status">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/ml-rust/rav1r" alt="License">
+  </a>
+  <a href="https://github.com/ml-rust/rav1r/stargazers">
+    <img src="https://img.shields.io/github/stars/ml-rust/rav1r?style=social" alt="GitHub stars">
+  </a>
+</p>
+
+</div>
+
+rav1r is the AV1 encoder of the ml-rust media stack. [vidr](https://github.com/ml-rust/vidr) calls it as a library. Frames go in through `Context::send_frame` and AV1 packets come out of `Context::receive_packet`. Muxing lives in [containr](https://github.com/ml-rust/containr).
+
+## Origin
+
+rav1r derives from [rav1e](https://github.com/xiph/rav1e) at commit `31435de9d76fddd38f6dcc31d4014574cebb2092` of its `master` branch. [NOTICE](NOTICE) holds the attribution.
+
+The published rav1e 0.8.1 fails `cargo deny`, and vidr's `deny.toml` denies git sources. So vidr cannot depend on upstream. This repository publishes its own crate.
+
+## What changed
+
+Removed, because vidr never calls it:
+
+| Removed                                                                          | Reason                                          |
+| -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `rav1e` and `rav1e-ch` binaries, `clap`, and the other CLI dependencies          | rav1r is a library                              |
+| C API (`capi`, `cbindgen.toml`)                                                  | No C caller exists                              |
+| Channel API (`channel-api`) and `Config::with_parallel_gops`                     | Nothing uses it                                 |
+| Fuzz targets, benches, `tools/`, `cross/`                                        | Each pulls dependencies or toolchains in        |
+| IVF and Y4M code (`ivf/`, `y4m`)                                                 | Containers belong to containr                   |
+| wasm support (`wasm` feature, `wasm-bindgen`)                                    | vidr does not target wasm                       |
+| `built`, `simd_helpers`, `noop_proc_macro`, `arg_enum_proc_macro`, `maybe-rayon` | Stale. Small in-tree code replaces each of them |
+
+Behaviour changes in the library:
+
+- `version::hash` is gone. `version::long` and `version::full` return the crate version.
+- The enums that derived `ArgEnum` keep `FromStr`, `Display`, and `variants()`. `variants()` returns a slice. `descriptions()` is gone.
+- `asm` is off by default and it also controls `av-scenechange/asm`.
+- With `threading` off, `rayon` is absent and the encoder runs on the calling thread.
+
+Kept on purpose: 12-bit, 4:2:2 and 4:4:4 in the encoder. They keep merges from upstream small.
 
 ## Features
-* Intra, inter, and switch frames
-* 64x64 superblocks
-* 4x4 to 64x64 RDO-selected square and rectangular blocks
-* DC, H, V, Paeth, smooth, and all directional prediction modes
-* DCT, (FLIP-)ADST and identity transforms (up to 64x64, 16x16 and 32x32 respectively)
-* 8-, 10- and 12-bit depth color
-* 4:2:0, 4:2:2 and 4:4:4 chroma sampling
-* 11 speed settings (0-10, exhaustive to near real-time)
-* Constant quantizer and target bitrate (single- and multi-pass) encoding modes
-* Still picture mode
 
-## Documentation
-Find the documentation in [`doc/`](doc/README.md)
+| Feature             | What it does                                                               |
+| ------------------- | -------------------------------------------------------------------------- |
+| `threading`         | Default. Uses `rayon` for tile and lookahead parallelism                   |
+| `asm`               | Builds the hand-written assembly. Needs NASM 2.15 or newer on `x86_64`, and a C compiler on `aarch64` |
+| `serialize`         | `serde` support for the config and stats types                             |
+| `unstable`          | `Config::with_thread_pool`                                                 |
+| `tracing`           | Emits profiling spans through `tracing`                                    |
+| `dump_lookahead_data` | Writes lookahead debug data to disk                                      |
+| `desync_finder`     | Entropy coder desync debugging                                             |
+| `check_asm`         | Compares each assembly routine with the Rust routine                       |
+| `decode_test`, `decode_test_dav1d` | Decode with libaom or dav1d in tests                        |
+| `quick_test`        | Shortens the encode-decode tests                                           |
 
-## Releases
-For the foreseeable future, a weekly pre-release of rav1e will be [published](https://github.com/xiph/rav1e/releases) every Tuesday.
-
-## Building
-
-### Toolchain: Rust
-
-rav1e currently requires Rust 1.85 or later to build.
-
-### Dependency: NASM
-Some `x86_64`-specific optimizations require [NASM](https://nasm.us/) `2.14.02` or newer and are enabled by default.
-`strip` will be used if available to remove the local symbols from the asm objects.
-
-The CI is testing against `nasm 2.15.05`, so bugs for other versions might happen. If you find one please open an issue!
-
-<details>
-<summary>
-Install nasm
-</summary>
-
-**ubuntu 20.04** (`nasm 2.14.02`)
-```sh
-sudo apt install nasm
-```
-**ubuntu 18.04** (`nasm 2.14.02`)
-```sh
-sudo apt install nasm-mozilla
-# link nasm into $PATH
-sudo ln /usr/lib/nasm-mozilla/bin/nasm /usr/local/bin/
-```
-**fedora 31, 32** (`nasm 2.14.02`)
-```sh
-sudo dnf install nasm
-```
-**windows** (`nasm 2.15.05`) <br/>
-Have a [NASM binary](https://www.nasm.us/pub/nasm/releasebuilds/) in your system PATH.
-```sh
-$NASM_VERSION="2.15.05" # or newer
-$LINK="https://www.nasm.us/pub/nasm/releasebuilds/$NASM_VERSION/win64"
-curl --ssl-no-revoke -LO "$LINK/nasm-$NASM_VERSION-win64.zip"
-7z e -y "nasm-$NASM_VERSION-win64.zip" -o "C:\nasm"
-# set path for the current sessions
-set PATH="%PATH%;C:\nasm"
-```
-**macOS** (`nasm 2.15.05`)
-```sh
-brew install nasm
-```
-
-</details>
-
-### Release binary
-To build release binary in `target/release/rav1e` run:
-
-```sh
-cargo build --release
-```
-
-### Unstable features
-Experimental API and Features can be enabled by using the `unstable` feature.
-
-```sh
-cargo build --features <feature>,unstable
-```
-
-#### Current unstable features
-- Channel API:
-```sh
-cargo build --features channel-api,unstable
-```
-
-
-Those Features and API are bound to change and evolve, do not rely on them staying the same over releases.
-
-### Target-specific builds
-The rust compiler can produce a binary that is about 11%-13% faster if it can use `avx2`, `bmi1`, `bmi2`, `fma`, `lzcnt` and `popcnt` in the general code, you may allow it by issuing:
-
-```sh
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-# or
-RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release
-```
-
-The resulting binary will not work on cpus that do not sport the same set of extensions enabled.
-
-> **NOTE** : You may use `rustc --print target-cpus` to check if the cpu is supported, if not `-C target-cpu=native` would be a no-op.
-
-### Building the C-API
-**rav1e** provides a C-compatible set of library, header and pkg-config file.
-
-To build and install it you can use [cargo-c](https://crates.io/crates/cargo-c):
-
-```sh
-cargo install cargo-c
-cargo cinstall --release
-```
-
-Please refer to the cargo-c [installation](https://github.com/lu-zero/cargo-c#installation) instructions.
+The default build needs only a Rust toolchain, version 1.85 or later. The `asm` feature links the objects under `src/x86` and `src/arm`. Their headers name VideoLAN, the dav1d authors, Two Orioles, and Martin Storsjo, among others, and they stay in place.
 
 ## Usage
-### Compressing video
-Input videos must be in [y4m format](https://wiki.multimedia.cx/index.php/YUV4MPEG2). The monochrome color format is not supported.
 
-```sh
-cargo run --release --bin rav1e -- input.y4m -o output.ivf
+```bash
+cargo add rav1r
 ```
 
-_(Find a y4m-file for testing at [`tests/small_input.y4m`](tests/small_input.y4m) or at http://ultravideo.cs.tut.fi/#testsequences)_
+```rust,no_run
+use rav1r::prelude::*;
 
-### Decompressing video
-Encoder output should be compatible with any AV1 decoder compliant with the v1.0.0 specification. You can decode using [dav1d](https://code.videolan.org/videolan/dav1d), which is now packaged [![in over 40 repositories](https://repology.org/badge/tiny-repos/dav1d.svg)](https://repology.org/project/dav1d/versions).
-
-```sh
-dav1d -i output.ivf -o output.y4m
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cfg = Config::default();
+    let mut ctx: Context<u8> = cfg.new_context()?;
+    ctx.send_frame(ctx.new_frame())?;
+    ctx.flush();
+    loop {
+        match ctx.receive_packet() {
+            Ok(packet) => println!("packet of {} bytes", packet.data.len()),
+            Err(EncoderStatus::Encoded) => {}
+            Err(EncoderStatus::LimitReached) => break,
+            Err(err) => return Err(err.into()),
+        }
+    }
+    Ok(())
+}
 ```
 
-### Configuring
-rav1e has several optional features that can be enabled by passing `--features` to cargo. Passing `--all-features` is discouraged.
+[`examples/simple_encoding.rs`](examples/simple_encoding.rs) shows a longer run. [`doc/`](doc/README.md) holds the upstream design notes.
 
-#### Features
-Find a full list in feature-table in [`Cargo.toml`](Cargo.toml)
+## Taking upstream fixes
 
-* `asm` - enabled by default. When enabled, assembly is built for the platforms supporting it.
-  * `x86_64`: Requires [`nasm`](#dependency-nasm).
-  * `aarch64`
-    * Requires `gas`
-    * Alternative: Use `clang` assembler by setting `CC=clang`
+The `upstream` remote points at `https://github.com/xiph/rav1e`.
 
-**NOTE**: `SSE2` is always enabled on `x86_64`, `neon` is always enabled for aarch64, you may set the environment variable `RAV1E_CPU_TARGET` to `rust` to disable all the assembly-optimized routines at the runtime.
+1. Encode the reference clips on the current build and keep the packet bytes.
+2. Run `git fetch upstream` and merge `upstream/master`.
+3. Resolve each conflict at a removal site by keeping the removal. Keep `rustfmt.toml` and do not reformat files.
+4. Encode the same clips with the same config and thread count. The packet bytes must match. A change that alters the bitstream gets named in the merge commit.
+5. Run the checks in [AGENTS.md](AGENTS.md), with default features and with `asm`.
 
-## Contributing
-Please read our guide to [contributing to rav1e](CONTRIBUTING.md).
+## License and patents
 
-## Getting in Touch
-Come chat with us on the IRC channel #daala on [Libera.Chat](https://libera.chat/)! You can also use a [web client](https://web.libera.chat/?channel=#daala) to join with a web browser.
+rav1r is licensed under the BSD 2-Clause License in [LICENSE](LICENSE). [PATENTS](PATENTS) holds the Alliance for Open Media Patent License 1.0.
 
+The patent license sets conditions on every distribution:
 
-<!-- Links -->
-[actions]: https://github.com/xiph/rav1e/actions
-[codecov]: https://codecov.io/gh/xiph/rav1e
+- A source distribution carries `PATENTS` in its root directory.
+- A binary distribution reproduces the AOM Patent License 1.0 in its documentation, legal notices, or other written materials. It reproduces the BSD license text there too.
+- Section 1.3 of [PATENTS](PATENTS) ends the patent license for a licensee that sues over an Implementation, with two stated exceptions.
 
-<!-- Badges -->
-[actions badge]: https://github.com/xiph/rav1e/workflows/rav1e/badge.svg
-[codecov badge]: https://codecov.io/gh/xiph/rav1e/branch/master/graph/badge.svg
+Original rav1e copyright notices stay in every file.

@@ -13,10 +13,10 @@ use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::{fmt, io, mem};
 
-use arg_enum_proc_macro::ArgEnum;
 use arrayvec::*;
 use bitstream_io::{BigEndian, BitWrite, BitWriter};
-use rayon::iter::*;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 
 use crate::activity::*;
 use crate::api::*;
@@ -29,6 +29,7 @@ use crate::header::*;
 use crate::lrf::*;
 use crate::mc::{FilterMode, MotionVector};
 use crate::me::*;
+use crate::par::iter::*;
 use crate::partition::PartitionType::*;
 use crate::partition::RefType::*;
 use crate::partition::*;
@@ -41,12 +42,10 @@ use crate::rate::{
 };
 use crate::rdo::*;
 use crate::segmentation::*;
-use crate::serialize::{Deserialize, Serialize};
 use crate::stats::EncoderStats;
 use crate::tiling::*;
 use crate::transform::*;
 use crate::util::*;
-use crate::wasm_bindgen::*;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,16 +99,15 @@ impl<T: Pixel> ReferenceFramesSet<T> {
   }
 }
 
-#[wasm_bindgen]
-#[derive(
-  ArgEnum, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default,
-)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum Tune {
   Psnr,
   #[default]
   Psychovisual,
 }
+arg_enum!(Tune { Psnr, Psychovisual });
 
 const FRAME_ID_LENGTH: u32 = 15;
 const DELTA_FRAME_ID_LENGTH: u32 = 14;

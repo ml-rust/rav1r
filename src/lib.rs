@@ -7,7 +7,7 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
-//! rav1e is an [AV1] video encoder. It is designed to eventually cover all use
+//! rav1r is an [AV1] video encoder. It is designed to eventually cover all use
 //! cases, though in its current form it is most suitable for cases where
 //! libaom (the reference encoder) is too slow.
 //!
@@ -49,34 +49,8 @@ use crate::encoder::*;
 pub use crate::frame::Frame;
 pub use crate::util::{CastFromPrimitive, Pixel, PixelType};
 
-pub(crate) mod built_info {
-  // The file has been placed there by the build script.
-  include!(concat!(env!("OUT_DIR"), "/built.rs"));
-}
-
-mod serialize {
-  cfg_if::cfg_if! {
-    if #[cfg(feature="serialize")] {
-      pub use serde::*;
-    } else {
-      pub use noop_proc_macro::{Deserialize, Serialize};
-    }
-  }
-}
-
-mod wasm_bindgen {
-  cfg_if::cfg_if! {
-    if #[cfg(feature="wasm")] {
-      pub use wasm_bindgen::prelude::*;
-    } else {
-      pub use noop_proc_macro::wasm_bindgen;
-    }
-  }
-}
-
-#[cfg(any(cargo_c, feature = "capi"))]
-pub mod capi;
-
+#[macro_use]
+mod arg_enum;
 #[macro_use]
 mod transform;
 #[macro_use]
@@ -115,6 +89,8 @@ mod token_cdfs;
 mod api;
 mod frame;
 mod header;
+#[doc(hidden)]
+pub mod par;
 
 /// Commonly used types and traits.
 pub mod prelude {
@@ -154,10 +130,10 @@ pub mod config {
 
 /// Version information
 ///
-/// The information is recovered from `Cargo.toml` and `git describe`, when available.
+/// The information is recovered from `Cargo.toml`.
 ///
 /// ```
-/// use rav1e::version;
+/// use rav1r::version;
 /// use semver::Version;
 ///
 /// let major = version::major();
@@ -216,114 +192,22 @@ pub mod version {
     env!("CARGO_PKG_VERSION").to_string()
   }
 
-  /// Version information as presented in `[package] version` followed by the
-  /// short commit hash if present.
+  /// Version information as presented in `[package]` `version`.
   ///
-  /// e.g. `0.1.0 - g743d464`
-  ///
+  /// It equals [`short`]. No commit hash is included.
   pub fn long() -> String {
-    let s = short();
-    let hash = hash();
-
-    if hash.is_empty() {
-      s
-    } else {
-      format!("{s} - {hash}")
-    }
+    short()
   }
 
-  cfg_if::cfg_if! {
-    if #[cfg(feature="git_version")] {
-      fn git_version() -> &'static str {
-        crate::built_info::GIT_VERSION.unwrap_or_default()
-      }
-
-      fn git_hash() -> &'static str {
-        crate::built_info::GIT_COMMIT_HASH.unwrap_or_default()
-      }
-    } else {
-      fn git_version() -> &'static str {
-        "UNKNOWN"
-      }
-
-      fn git_hash() -> &'static str {
-        "UNKNOWN"
-      }
-    }
-  }
-  /// Commit hash (short)
+  /// Version information as presented in `[package]` `version`.
   ///
-  /// Short hash of the git commit used by this build
-  ///
-  /// e.g. `g743d464`
-  ///
-  pub fn hash() -> String {
-    git_hash().to_string()
-  }
-
-  /// Version information with the information
-  /// provided by `git describe --tags`.
-  ///
-  /// e.g. `0.1.0 (v0.1.0-1-g743d464)`
-  ///
+  /// It equals [`short`]. No `git describe` output is included.
   pub fn full() -> String {
-    format!("{} ({})", short(), git_version(),)
+    short()
   }
 }
 #[cfg(all(
-  any(test, fuzzing),
+  test,
   any(feature = "decode_test", feature = "decode_test_dav1d")
 ))]
 mod test_encode_decode;
-
-#[cfg(feature = "bench")]
-pub mod bench {
-  pub mod api {
-    pub use crate::api::*;
-  }
-  pub mod cdef {
-    pub use crate::cdef::*;
-  }
-  pub mod context {
-    pub use crate::context::*;
-  }
-  pub mod dist {
-    pub use crate::dist::*;
-  }
-  pub mod ec {
-    pub use crate::ec::*;
-  }
-  pub mod encoder {
-    pub use crate::encoder::*;
-  }
-  pub mod mc {
-    pub use crate::mc::*;
-  }
-  pub mod partition {
-    pub use crate::partition::*;
-  }
-  pub mod frame {
-    pub use crate::frame::*;
-  }
-  pub mod predict {
-    pub use crate::predict::*;
-  }
-  pub mod rdo {
-    pub use crate::rdo::*;
-  }
-  pub mod tiling {
-    pub use crate::tiling::*;
-  }
-  pub mod transform {
-    pub use crate::transform::*;
-  }
-  pub mod util {
-    pub use crate::util::*;
-  }
-  pub mod cpu_features {
-    pub use crate::cpu_features::*;
-  }
-}
-
-#[cfg(fuzzing)]
-pub mod fuzzing;

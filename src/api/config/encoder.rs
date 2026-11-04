@@ -8,12 +8,13 @@
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
 use itertools::*;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 
 use crate::api::color::*;
 use crate::api::config::GrainTableSegment;
 use crate::api::{Rational, SpeedSettings};
 use crate::encoder::Tune;
-use crate::serialize::{Deserialize, Serialize};
 
 use std::fmt;
 
@@ -23,7 +24,8 @@ pub(crate) const MAX_RDO_LOOKAHEAD_FRAMES: usize = usize::MAX - 1;
 pub(crate) const MAX_MAX_KEY_FRAME_INTERVAL: u64 = i32::MAX as u64 / 3;
 
 /// Encoder settings which impact the produced bitstream.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct EncoderConfig {
   // output size
   /// Width of the frames in pixels.

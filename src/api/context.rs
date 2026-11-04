@@ -28,7 +28,7 @@ use crate::util::Pixel;
 pub struct Context<T: Pixel> {
   pub(crate) inner: ContextInner<T>,
   pub(crate) config: EncoderConfig,
-  pub(crate) pool: Option<Arc<rayon::ThreadPool>>,
+  pub(crate) pool: Option<Arc<crate::par::ThreadPool>>,
   pub(crate) is_flushing: bool,
 }
 
@@ -38,7 +38,7 @@ impl<T: Pixel> Context<T> {
   /// # Examples
   ///
   /// ```
-  /// use rav1e::prelude::*;
+  /// use rav1r::prelude::*;
   ///
   /// # fn main() -> Result<(), InvalidConfig> {
   /// let cfg = Config::default();
@@ -76,7 +76,7 @@ impl<T: Pixel> Context<T> {
   /// # Examples
   ///
   /// ```
-  /// use rav1e::prelude::*;
+  /// use rav1r::prelude::*;
   ///
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # if false {
@@ -208,7 +208,7 @@ impl<T: Pixel> Context<T> {
   /// Encoding a single frame:
   ///
   /// ```
-  /// use rav1e::prelude::*;
+  /// use rav1r::prelude::*;
   ///
   /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
   /// # if false {
@@ -236,7 +236,7 @@ impl<T: Pixel> Context<T> {
   ///
   /// ```
   /// use std::sync::Arc;
-  /// use rav1e::prelude::*;
+  /// use rav1r::prelude::*;
   ///
   /// fn encode_frames(
   ///     ctx: &mut Context<u8>,

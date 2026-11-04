@@ -1,4 +1,4 @@
-use rav1e::prelude::*;
+use rav1r::prelude::*;
 
 #[test]
 fn send_frame() -> Result<(), Box<dyn std::error::Error>> {

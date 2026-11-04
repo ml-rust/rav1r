@@ -7,25 +7,13 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
-use crate::serialize::*;
-use crate::wasm_bindgen::*;
-
-use arg_enum_proc_macro::ArgEnum;
 use num_derive::FromPrimitive;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 
 /// Sample position for subsampled chroma
-#[wasm_bindgen]
-#[derive(
-  Copy,
-  Clone,
-  Debug,
-  PartialEq,
-  Eq,
-  FromPrimitive,
-  Serialize,
-  Deserialize,
-  Default,
-)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, FromPrimitive, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum ChromaSamplePosition {
   /// The source video transfer function must be signaled
@@ -44,18 +32,8 @@ pub use v_frame::pixel::ChromaSampling;
 /// Supported Color Primaries
 ///
 /// As defined by “Color primaries” section of ISO/IEC 23091-4/ITU-T H.273
-#[derive(
-  ArgEnum,
-  Debug,
-  Clone,
-  Copy,
-  PartialEq,
-  Eq,
-  FromPrimitive,
-  Serialize,
-  Deserialize,
-  Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum ColorPrimaries {
   /// BT.709
@@ -85,21 +63,26 @@ pub enum ColorPrimaries {
   EBU3213 = 22,
 }
 
+arg_enum!(ColorPrimaries {
+  BT709,
+  Unspecified,
+  BT470M,
+  BT470BG,
+  BT601,
+  SMPTE240,
+  GenericFilm,
+  BT2020,
+  XYZ,
+  SMPTE431,
+  SMPTE432,
+  EBU3213,
+});
+
 /// Supported Transfer Characteristics
 ///
 /// As defined by “Transfer characteristics” section of ISO/IEC 23091-4/ITU-TH.273.
-#[derive(
-  ArgEnum,
-  Debug,
-  Clone,
-  Copy,
-  PartialEq,
-  Eq,
-  FromPrimitive,
-  Serialize,
-  Deserialize,
-  Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum TransferCharacteristics {
   /// BT.709
@@ -139,21 +122,31 @@ pub enum TransferCharacteristics {
   HLG,
 }
 
+arg_enum!(TransferCharacteristics {
+  BT709,
+  Unspecified,
+  BT470M,
+  BT470BG,
+  BT601,
+  SMPTE240,
+  Linear,
+  Log100,
+  Log100Sqrt10,
+  IEC61966,
+  BT1361,
+  SRGB,
+  BT2020_10Bit,
+  BT2020_12Bit,
+  SMPTE2084,
+  SMPTE428,
+  HLG,
+});
+
 /// Matrix coefficients
 ///
 /// As defined by the “Matrix coefficients” section of ISO/IEC 23091-4/ITU-TH.273.
-#[derive(
-  ArgEnum,
-  Debug,
-  Clone,
-  Copy,
-  PartialEq,
-  Eq,
-  FromPrimitive,
-  Serialize,
-  Deserialize,
-  Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum MatrixCoefficients {
   /// Identity matrix
@@ -187,8 +180,26 @@ pub enum MatrixCoefficients {
   ICtCp,
 }
 
+arg_enum!(MatrixCoefficients {
+  Identity,
+  BT709,
+  Unspecified,
+  FCC,
+  BT470BG,
+  BT601,
+  SMPTE240,
+  YCgCo,
+  BT2020NCL,
+  BT2020CL,
+  SMPTE2085,
+  ChromatNCL,
+  ChromatCL,
+  ICtCp,
+});
+
 /// Signal the content color description
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ColorDescription {
   /// Color primaries.
   pub color_primaries: ColorPrimaries,
@@ -209,19 +220,8 @@ impl ColorDescription {
 /// Allowed pixel value range
 ///
 /// C.f. `VideoFullRangeFlag` variable specified in ISO/IEC 23091-4/ITU-T H.273
-#[wasm_bindgen]
-#[derive(
-  ArgEnum,
-  Debug,
-  Clone,
-  Copy,
-  PartialEq,
-  Eq,
-  FromPrimitive,
-  Serialize,
-  Deserialize,
-  Default,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, Default)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum PixelRange {
   /// Studio swing representation
@@ -231,10 +231,16 @@ pub enum PixelRange {
   Full,
 }
 
+arg_enum!(PixelRange {
+  Limited,
+  Full,
+});
+
 /// High dynamic range content light level
 ///
 /// As defined by CEA-861.3, Appendix A.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ContentLight {
   /// Maximum content light level
   pub max_content_light_level: u16,
@@ -244,7 +250,8 @@ pub struct ContentLight {
 
 /// Chromaticity coordinates as defined by CIE 1931, expressed as 0.16
 /// fixed-point values.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub struct ChromaticityPoint {
   /// The X coordinate.
@@ -256,7 +263,8 @@ pub struct ChromaticityPoint {
 /// High dynamic range mastering display color volume
 ///
 /// As defined by CIE 1931
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct MasteringDisplay {
   /// Chromaticity coordinates in Red, Green, Blue order
   /// expressed as 0.16 fixed-point

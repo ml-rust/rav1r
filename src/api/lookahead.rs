@@ -8,13 +8,13 @@ use crate::encoder::{
 };
 use crate::frame::{AsRegion, PlaneOffset};
 use crate::me::{estimate_tile_motion, RefMEStats};
+use crate::par::iter::*;
 use crate::partition::{get_intra_edges, BlockSize};
 use crate::predict::{IntraParam, PredictionMode};
 use crate::tiling::{Area, PlaneRegion, TileRect};
 use crate::transform::TxSize;
 use crate::util::Aligned;
 use crate::Pixel;
-use rayon::iter::*;
 use std::sync::Arc;
 use v_frame::frame::Frame;
 use v_frame::pixel::CastFromPrimitive;

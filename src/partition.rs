@@ -16,10 +16,11 @@ use crate::context::*;
 use crate::frame::*;
 use crate::predict::*;
 use crate::recon_intra::*;
-use crate::serialize::{Deserialize, Serialize};
 use crate::tiling::*;
 use crate::transform::TxSize;
 use crate::util::*;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use std::mem::transmute;
@@ -125,7 +126,8 @@ pub enum PartitionType {
   PARTITION_INVALID,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[cfg_attr(test, derive(Default))]
 pub enum BlockSize {
   BLOCK_4X4,
@@ -599,7 +601,7 @@ fn supersample_chroma_bsize(
 
 type IntraEdgeBuffer<T> = Aligned<[MaybeUninit<T>; 4 * MAX_TX_SIZE + 1]>;
 
-#[cfg(any(test, feature = "bench"))]
+#[cfg(test)]
 type IntraEdgeMock<T> = Aligned<[T; 4 * MAX_TX_SIZE + 1]>;
 
 pub struct IntraEdge<'a, T: Pixel>(&'a [T], &'a [T], &'a [T]);
@@ -627,7 +629,7 @@ impl<'a, T: Pixel> IntraEdge<'a, T> {
     self.1.as_ptr()
   }
 
-  #[cfg(any(test, feature = "bench"))]
+  #[cfg(test)]
   pub fn mock(edge_buf: &'a IntraEdgeMock<T>) -> Self {
     let left = &edge_buf.data[..];
     let (left, top_left) = left.split_at(2 * MAX_TX_SIZE);

@@ -1,0 +1,22 @@
+rav1r
+
+rav1r derives from rav1e (https://github.com/xiph/rav1e). The base is the
+master branch at commit 31435de9d76fddd38f6dcc31d4014574cebb2092.
+
+rav1e is copyright the rav1e contributors, including Thomas Daede and the
+other authors in the upstream git history at
+https://github.com/xiph/rav1e/graphs/contributors. Copyright notices in the
+files and in LICENSE keep their original wording.
+
+LICENSE holds the BSD 2-Clause License. PATENTS holds the Alliance for Open
+Media Patent License 1.0. Both apply to rav1r and stay unchanged.
+
+Files with their own headers keep them in place:
+
+- The assembly under src/x86 and src/arm names VideoLAN and the dav1d
+  authors, Two Orioles, LLC, Martin Storsjo, Janne Grunau, VideoLabs,
+  Matthias Dressel, B Krishnan Iyer, and Nathan Egge.
+- src/ext/x86/x86inc.asm names the x264 project and its authors.
+
+Source and binary distributions of rav1r reproduce LICENSE, PATENTS, and this
+notice, as those files require.

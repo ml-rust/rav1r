@@ -1626,10 +1626,9 @@ pub(crate) mod rust {
   use super::*;
   use crate::cpu_features::CpuFeatureLevel;
 
-  use simd_helpers::cold_for_target_arch;
   use std::cmp;
 
-  #[cold_for_target_arch("x86_64", "aarch64")]
+  #[cfg_attr(any(target_arch = "x86_64", target_arch = "aarch64"), cold)]
   pub fn inverse_transform_add<T: Pixel>(
     input: &[T::Coeff], output: &mut PlaneRegionMut<'_, T>, _eob: u16,
     tx_size: TxSize, tx_type: TxType, bd: usize, _cpu: CpuFeatureLevel,

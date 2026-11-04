@@ -94,59 +94,6 @@ fn fill_frame_const<T: Pixel>(frame: &mut Frame<T>, value: T) {
   }
 }
 
-#[cfg(feature = "channel-api")]
-mod channel {
-  use super::*;
-
-  #[interpolate_test(low_latency_no_scene_change, true, true)]
-  #[interpolate_test(reorder_no_scene_change, false, true)]
-  #[interpolate_test(low_latency_scene_change_detection, true, false)]
-  #[interpolate_test(reorder_scene_change_detection, false, false)]
-  fn flush(low_lantency: bool, no_scene_detection: bool) {
-    let cfg = setup_config(
-      64,
-      80,
-      10,
-      100,
-      8,
-      ChromaSampling::Cs420,
-      150,
-      200,
-      0,
-      low_lantency,
-      0,
-      no_scene_detection,
-      10,
-      None,
-    );
-
-    let limit = 41;
-
-    let (mut sf, rp) = cfg.new_channel::<u8>().unwrap();
-
-    for _ in 0..limit {
-      let input = sf.new_frame();
-      let _ = sf.send(input);
-    }
-
-    drop(sf);
-
-    let mut count = 0;
-
-    for _ in 0..limit {
-      let _ = rp
-        .recv()
-        .map(|_| {
-          eprintln!("Packet Received {}/{}", count, limit);
-          count += 1;
-        })
-        .unwrap();
-    }
-
-    assert_eq!(limit, count);
-  }
-}
-
 #[interpolate_test(low_latency_no_scene_change, true, true)]
 #[interpolate_test(reorder_no_scene_change, false, true)]
 #[interpolate_test(low_latency_scene_change_detection, true, false)]

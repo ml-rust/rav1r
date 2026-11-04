@@ -7,9 +7,6 @@
 // Media Patent License 1.0 was not distributed with this source code in the
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
-// Fuzzing only uses a subset of these.
-#![cfg_attr(fuzzing, allow(unused))]
-
 use crate::color::ChromaSampling;
 
 use crate::api::config::GrainTableSegment;
@@ -101,15 +98,6 @@ pub(crate) trait TestDecoder<T: Pixel> {
       "Encoding {}x{} speed {} quantizer {} bit-depth {} bitrate {}",
       w, h, speed, quantizer, bit_depth, bitrate
     );
-    #[cfg(feature = "dump_ivf")]
-    let mut out = std::fs::File::create(&format!(
-      "out-{}x{}-s{}-q{}-r{}-{:?}.ivf",
-      w, h, speed, quantizer, bitrate, chroma_sampling
-    ))
-    .unwrap();
-    #[cfg(feature = "dump_ivf")]
-    ivf::write_ivf_header(&mut out, w, h, 30, 1);
-
     let mut rec_fifo = VecDeque::new();
     read_frame_batch(&mut ctx, &mut ra, limit);
 
@@ -119,9 +107,6 @@ pub(crate) trait TestDecoder<T: Pixel> {
         let res = ctx.receive_packet();
         if let Ok(pkt) = res {
           debug!("Encoded packet {}", pkt.input_frameno);
-
-          #[cfg(feature = "dump_ivf")]
-          ivf::write_ivf_frame(&mut out, pkt.input_frameno, &pkt.data);
 
           if let Some(pkt_rec) = pkt.rec {
             rec_fifo.push_back((*pkt_rec).clone());
@@ -200,9 +185,7 @@ fn setup_encoder<T: Pixel>(
   enc.still_picture = still_picture;
   enc.film_grain_params = grain_table;
 
-  let threads = if cfg!(fuzzing) { 1 } else { 2 };
-
-  let cfg = Config::new().with_encoder_config(enc).with_threads(threads);
+  let cfg = Config::new().with_encoder_config(enc).with_threads(2);
 
   cfg.new_context().unwrap()
 }

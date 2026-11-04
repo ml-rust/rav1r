@@ -15,7 +15,6 @@ use crate::transform::*;
 use crate::util::*;
 use std::mem::MaybeUninit;
 
-use debug_unreachable::debug_unreachable;
 
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -240,7 +239,9 @@ unsafe fn shift_right(a: I32X8, shift: u8) -> I32X8 {
 #[inline]
 unsafe fn round_shift_array_avx2(arr: &mut [I32X8], bit: i8) {
   if arr.len() % 4 != 0 {
-    debug_unreachable!();
+    debug_assert!(false, "the array length is not a multiple of the vector size");
+    // SAFETY: every caller passes a length that is a multiple of the vector size.
+    unsafe { std::hint::unreachable_unchecked() }
   }
 
   if bit == 0 {

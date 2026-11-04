@@ -46,8 +46,6 @@ pub struct CdefDirections {
 pub(crate) mod rust {
   use super::*;
 
-  use simd_helpers::cold_for_target_arch;
-
   // Instead of dividing by n between 2 and 8, we multiply by 3*5*7*8/n.
   // The output is then 840 times larger, but we don't care for finding
   // the max.
@@ -193,7 +191,7 @@ pub(crate) mod rust {
     }
   }
 
-  #[cold_for_target_arch("x86_64")]
+  #[cfg_attr(target_arch = "x86_64", cold)]
   #[allow(clippy::erasing_op, clippy::identity_op, clippy::neg_multiply)]
   pub(crate) unsafe fn cdef_filter_block<T: Pixel, U: Pixel>(
     dst: &mut PlaneRegionMut<'_, T>, input: *const U, istride: isize,

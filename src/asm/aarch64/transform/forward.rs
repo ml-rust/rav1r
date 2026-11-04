@@ -15,7 +15,6 @@ use crate::transform::*;
 use crate::util::*;
 use std::mem::MaybeUninit;
 
-use debug_unreachable::debug_unreachable;
 
 use core::arch::aarch64::*;
 
@@ -235,7 +234,9 @@ unsafe fn shift_right_neon<const SHIFT: i32>(a: I32X8) -> I32X8 {
 #[inline]
 unsafe fn round_shift_array_neon(arr: &mut [I32X8], bit: i8) {
   if arr.len() % 4 != 0 {
-    debug_unreachable!();
+    debug_assert!(false, "the array length is not a multiple of the vector size");
+    // SAFETY: every caller passes a length that is a multiple of the vector size.
+    unsafe { std::hint::unreachable_unchecked() }
   }
 
   if bit == 0 {
@@ -255,7 +256,9 @@ unsafe fn round_shift_array_neon(arr: &mut [I32X8], bit: i8) {
         }
       }
     } else {
-      debug_unreachable!();
+      debug_assert!(false, "a right shift above 2 has no branch here");
+      // SAFETY: every caller passes a right shift of 1 or 2.
+      unsafe { std::hint::unreachable_unchecked() }
     }
   } else {
     let shift = (-bit) as u8;

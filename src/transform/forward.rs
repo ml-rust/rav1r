@@ -28,7 +28,6 @@ pub mod rust {
 
   use crate::transform::forward_shared::*;
   use crate::transform::{av1_round_shift_array, valid_av1_transform, TxSize};
-  use simd_helpers::cold_for_target_arch;
 
   type TxfmFunc = fn(&mut [i32]);
 
@@ -67,7 +66,7 @@ pub mod rust {
   /// # Panics
   ///
   /// - If called with an invalid combination of `tx_size` and `tx_type`
-  #[cold_for_target_arch("x86_64")]
+  #[cfg_attr(target_arch = "x86_64", cold)]
   pub fn forward_transform<T: Coefficient>(
     input: &[i16], output: &mut [MaybeUninit<T>], stride: usize,
     tx_size: TxSize, tx_type: TxType, bd: usize, _cpu: CpuFeatureLevel,
