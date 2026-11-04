@@ -1,4 +1,5 @@
 aom_test
+scripts/gate/Cargo.lock
 target/
 *.y4m
 *.ivf

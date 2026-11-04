@@ -1,0 +1,30 @@
+# Reference encoder for the byte-identical gate. It builds upstream rav1e at the
+# base commit. build_upstream.sh runs it from a copy under ~/.cache/rav1r-gate.
+#
+# This directory is its own workspace, so the published crate and `cargo deny`
+# never see the git dependency.
+
+[package]
+name = "rav1r-gate-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "reference"
+path = "reference.rs"
+
+[features]
+threading = ["rav1e/threading"]
+
+[dependencies]
+# `default-features = false` leaves out rav1e's `asm` feature. rav1e still turns
+# on the `asm` feature of av-scenechange, so reference.rs forces that crate to
+# its Rust paths at run time.
+rav1e = { git = "https://github.com/xiph/rav1e", rev = "31435de9d76fddd38f6dcc31d4014574cebb2092", default-features = false }
+# Exact pins: rav1r inlines these versions.
+av-scenechange = { version = "=0.14.1", default-features = false }
+av1-grain = "=0.2.5"
+v_frame = "=0.3.9"
+
+[workspace]
