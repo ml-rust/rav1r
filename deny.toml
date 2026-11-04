@@ -4,7 +4,8 @@
 # CI gate:     .github/workflows/test.yml :: audit job
 #
 # Dev-dependencies are excluded in CI. They link test oracles only, and a
-# finding in a crate no consumer links is not a release gate.
+# finding in a crate no consumer links is not a release gate. scripts/gate has
+# its own workspace, so its git dependency on upstream stays out of this check.
 
 [graph]
 targets = [
@@ -13,7 +14,7 @@ targets = [
     { triple = "x86_64-pc-windows-msvc" },
     { triple = "aarch64-apple-darwin" },
 ]
-# Every gate, `cuda` included: each one adds dependencies a consumer can link.
+# Every feature: each one adds dependencies a consumer can link.
 all-features = true
 
 # ────────────────────────────────────────────────────────────────────────
@@ -40,9 +41,6 @@ allow = [
     "Unicode-DFS-2016",
     "Zlib",
     "CC0-1.0",
-    # dynasm and dynasmrt, through boostr and regexr. MPL-2.0 is file-level
-    # copyleft: it binds changes to those files, not code that links them.
-    "MPL-2.0",
 ]
 confidence-threshold = 0.93
 unused-allowed-license = "allow"
@@ -51,8 +49,6 @@ unused-allowed-license = "allow"
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
-# vidr-remaster names vidr by path and version. The path is dropped on publish.
-allow-wildcard-paths = true
 highlight = "all"
 deny = []
 skip-tree = []

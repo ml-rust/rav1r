@@ -25,7 +25,7 @@ $ nasm --version # if on x86_64
 ```
 Version:
 ```
-$ rav1e --version
+$ cargo tree -p rav1r --depth 0
 ```
 Operating system:
 ```

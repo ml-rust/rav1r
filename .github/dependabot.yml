@@ -1,0 +1,45 @@
+version: 2
+updates:
+  # Workflows pin every third-party action to a commit SHA. Dependabot reads
+  # the `# vX.Y.Z` comment beside each SHA and opens a PR that moves both when a
+  # newer release ships.
+  #
+  # `dtolnay/rust-toolchain` is the exception. The workflows pin
+  # `refs/heads/stable`, whose `action.yml` defaults `toolchain: stable`.
+  # Dependabot cannot track a branch pin, so a person bumps that SHA.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # One PR per week for all action bumps, because each PR costs a full matrix
+    # run.
+    groups:
+      actions:
+        patterns:
+          - "*"
+    # `default-days` is the only cooldown key GitHub Actions supports. Seven days
+    # keeps new releases out of the queue. Cooldown never delays security updates.
+    cooldown:
+      default-days: 7
+
+  # Cargo dependencies. The manifest uses caret requirements, so most releases
+  # need no manifest edit. These PRs move the requirement when a release is
+  # semver-incompatible.
+  #
+  # A runtime bump ships to every consumer, and a dev bump touches tests only.
+  # scripts/gate has its own manifest with exact pins and stays out of this list.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      runtime:
+        dependency-type: "production"
+        patterns:
+          - "*"
+      dev:
+        dependency-type: "development"
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7

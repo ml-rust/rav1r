@@ -1,0 +1,30 @@
+# CI: a thin wrapper that calls the reusable test workflow.
+#
+# Runs on every pull request, on every push to master, and on manual dispatch.
+# The master push gives the README badge a status to show. The tag gate
+# (release-prepare.yml) calls test.yml directly. The draft guard below skips
+# draft pull requests only.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: Test Suite
+    uses: ./.github/workflows/test.yml

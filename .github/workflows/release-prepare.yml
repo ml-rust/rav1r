@@ -1,0 +1,63 @@
+# Tag gate for a releasable build. Pushing a v* tag validates the tag and runs
+# the full test suite. Nothing is published and nothing leaves the repo.
+#
+# Publishing is the separate, manually dispatched `Release` workflow. A tag push
+# sends nothing to crates.io. A person starts the publish after this run passes.
+# A crates.io version can only be yanked, never removed, so an accidental tag
+# must not use one up.
+
+name: Release Prepare
+run-name: Release Prepare ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-prepare-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate-version:
+    uses: ./.github/workflows/release-validate.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  # Full lint, clippy feature matrix, tests, MSRV and audit gates. Calls
+  # test.yml directly, because the draft guard in ci.yml skips under
+  # workflow_call.
+  ci:
+    name: CI Gate
+    needs: validate-version
+    uses: ./.github/workflows/test.yml
+
+  summary:
+    name: Release instructions
+    needs: [validate-version, ci]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary
+        env:
+          VERSION: ${{ needs.validate-version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "## Prepared v${VERSION}"
+            echo
+            echo "The tag validates, the changelog section exists, and the full"
+            echo "suite passed. Publish with:"
+            echo
+            echo '```sh'
+            echo "gh workflow run release.yml -R ${REPO} -f tag=v${VERSION}"
+            echo '```'
+            echo
+            echo "If one stage fails, re-run the same command with only the"
+            echo "remaining stage enabled (e.g. \`-f publish_crate=false\`)."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,144 @@
+# Manual distribution workflow. Push a v* tag first; `Release Prepare` validates
+# the tag and runs the full suite. Then run this workflow with that tag.
+#
+# Stages:
+#   publish_crate   -> crates.io: rav1r
+#   github_release  -> GitHub Release, with the changelog section as the body
+#
+# Each stage is idempotent and selectable. An indexed version is skipped, and
+# the release is overwritten in place. To fix a crates.io timeout or a bad
+# release body, dispatch again with only the failed stage enabled. Nothing is
+# published twice.
+#
+# Required secret: CARGO_REGISTRY_TOKEN (environment `crates-io`).
+
+name: Release
+run-name: Release ${{ inputs.tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, e.g. v0.1.0"
+        required: true
+        type: string
+      publish_crate:
+        description: "Publish rav1r to crates.io"
+        type: boolean
+        default: true
+      github_release:
+        description: "Create the GitHub Release"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Always runs. Cheap, and it guarantees the dispatched tag still means what
+  # the prepare run assumed it meant.
+  validate-version:
+    uses: ./.github/workflows/release-validate.yml
+    with:
+      ref: ${{ inputs.tag }}
+
+  # ── crates.io ───────────────────────────────────────────────────────────────
+  # A verifying publish (no `--no-verify`) builds the uploaded tarball from a
+  # clean copy. It catches a file that is in git and missing from the package.
+  publish-crate:
+    name: Publish to crates.io
+    needs: validate-version
+    if: inputs.publish_crate
+    runs-on: ubuntu-latest
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+
+      - name: Set version from tag
+        run: bash scripts/ci/stamp_version.sh "${{ needs.validate-version.outputs.version }}"
+
+      # Skipped when the version is already indexed, so a re-run after a
+      # timeout publishes nothing twice.
+      - name: Publish rav1r
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION=$(cargo metadata --no-deps --format-version=1 \
+            | jq -r '.packages[] | select(.name == "rav1r") | .version')
+
+          is_published() {
+            curl -sf \
+              -H "User-Agent: rav1r-ci (github.com/ml-rust/rav1r)" \
+              "https://crates.io/api/v1/crates/$1/$2" > /dev/null 2>&1
+          }
+
+          # --allow-dirty: stamp_version.sh edits the manifest for a
+          # prerelease tag. The verifying publish still runs.
+          if is_published rav1r "$VERSION"; then
+            echo "rav1r@$VERSION already published, skipping"
+          else
+            echo "Publishing rav1r@$VERSION..."
+            cargo publish --allow-dirty
+          fi
+
+  # ── GitHub Release ──────────────────────────────────────────────────────────
+  # Independent of publish-crate: a crates.io outage does not block the release.
+  # Run this stage alone to fix a bad release body.
+  github-release:
+    name: Create GitHub Release
+    needs: validate-version
+    if: inputs.github_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      # The changelog is the release notes. `validate-version` has already
+      # checked that this section exists and is non-empty.
+      - name: Build release notes from the changelog
+        env:
+          TAG: ${{ inputs.tag }}
+          BASE: ${{ needs.validate-version.outputs.base_version }}
+        run: |
+          set -euo pipefail
+          # `-l` is required: `git tag` with a pattern and no list flag is the
+          # create form, which fails and drops the compare link from the notes.
+          PREVIOUS_TAG=$(git tag -l --sort=-v:refname 'v*' | grep -v "^${TAG}$" | head -n 1 || true)
+
+          bash scripts/ci/changelog_section.sh "$BASE" /tmp/changelog-section.md
+
+          {
+            cat /tmp/changelog-section.md
+            echo
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              echo "**Full diff:** https://github.com/ml-rust/rav1r/compare/${PREVIOUS_TAG}...${TAG}"
+            else
+              echo "**Tree:** https://github.com/ml-rust/rav1r/tree/${TAG}"
+            fi
+          } > /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: rav1r ${{ needs.validate-version.outputs.version }}
+          body_path: /tmp/release-notes.md
+          draft: false
+          prerelease: ${{ needs.validate-version.outputs.is_full_release != 'true' }}
