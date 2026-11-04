@@ -14,7 +14,7 @@
 //! thread.
 
 #[cfg(feature = "threading")]
-pub use rayon::{iter, ThreadPool, ThreadPoolBuilder};
+pub use rayon::{iter, scope, ThreadPool, ThreadPoolBuilder};
 
 #[cfg(not(feature = "threading"))]
 pub use sequential::*;
@@ -62,6 +62,30 @@ mod sequential {
         self.iter_mut()
       }
     }
+  }
+
+  /// Sequential stand-in for `rayon::Scope`.
+  pub struct Scope;
+
+  impl Scope {
+    /// Runs `body` on the calling thread before it returns.
+    #[inline(always)]
+    pub fn spawn<BODY>(&self, body: BODY)
+    where
+      BODY: FnOnce(&Scope) + Send,
+    {
+      body(self)
+    }
+  }
+
+  /// Sequential stand-in for `rayon::scope`.
+  #[inline(always)]
+  pub fn scope<OP, R>(op: OP) -> R
+  where
+    OP: FnOnce(&Scope) -> R + Send,
+    R: Send,
+  {
+    op(&Scope)
   }
 
   /// Sequential stand-in for `rayon::ThreadPoolBuilder`.

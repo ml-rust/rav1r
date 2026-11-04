@@ -23,12 +23,11 @@ cfg_if::cfg_if! {
   }
 }
 
-use aligned_vec::{avec, ABox};
-
 use crate::context::{TileBlockOffset, MAX_SB_SIZE_LOG2, MAX_TX_SIZE};
 use crate::cpu_features::CpuFeatureLevel;
 use crate::encoder::FrameInvariants;
 use crate::frame::*;
+use crate::frame_buffer::aligned::AlignedSlice;
 use crate::mc::*;
 use crate::partition::*;
 use crate::tiling::*;
@@ -382,7 +381,7 @@ impl PredictionMode {
   }
 
   /// Inter prediction that determines whether compound mode is being used based
-  /// on the second [`RefType`] in [`ref_frames`].
+  /// on the second `RefType` in `ref_frames`.
   pub fn predict_inter<T: Pixel>(
     self, fi: &FrameInvariants<T>, tile_rect: TileRect, p: usize,
     po: PlaneOffset, dst: &mut PlaneRegionMut<'_, T>, width: usize,
@@ -425,7 +424,7 @@ impl PredictionMode {
 /// compound inter prediction.
 #[derive(Debug)]
 pub struct InterCompoundBuffers {
-  data: ABox<[i16]>,
+  data: AlignedSlice<i16, 128>,
 }
 
 impl InterCompoundBuffers {
@@ -454,7 +453,7 @@ impl InterCompoundBuffers {
 
 impl Default for InterCompoundBuffers {
   fn default() -> Self {
-    Self { data: avec![0; 2 * Self::BUFFER_SIZE].into_boxed_slice() }
+    Self { data: AlignedSlice::from_elem(2 * Self::BUFFER_SIZE, 0) }
   }
 }
 

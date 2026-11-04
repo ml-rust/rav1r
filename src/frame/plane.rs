@@ -10,7 +10,7 @@
 use crate::tiling::*;
 use crate::util::*;
 
-pub use v_frame::plane::*;
+pub use crate::frame_buffer::plane::*;
 
 pub trait AsRegion<T: Pixel> {
   fn as_region(&self) -> PlaneRegion<'_, T>;

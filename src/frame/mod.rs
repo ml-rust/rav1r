@@ -46,7 +46,7 @@ pub struct FrameParameters {
   pub t35_metadata: Box<[T35]>,
 }
 
-pub use v_frame::frame::Frame;
+pub use crate::frame_buffer::frame::Frame;
 
 /// Public Trait Interface for Frame Allocation
 pub(crate) trait FrameAlloc {
@@ -62,7 +62,7 @@ impl<T: Pixel> FrameAlloc for Frame<T> {
   fn new(
     width: usize, height: usize, chroma_sampling: ChromaSampling,
   ) -> Self {
-    v_frame::frame::Frame::new_with_padding(
+    crate::frame_buffer::frame::Frame::new_with_padding(
       width,
       height,
       chroma_sampling,

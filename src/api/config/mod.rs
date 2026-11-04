@@ -18,7 +18,12 @@ use crate::util::Pixel;
 mod encoder;
 pub use encoder::*;
 
-pub use av1_grain::*;
+mod grain;
+pub use grain::*;
+
+// `av1-grain` re-exported `v_frame` at this path.
+#[doc(hidden)]
+pub use crate::frame_buffer as v_frame;
 
 use crate::levels::*;
 

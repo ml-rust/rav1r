@@ -21,21 +21,16 @@ repository = "https://github.com/ml-rust/rav1r"
 
 [features]
 unstable = []
-decode_test = ["aom-sys"]
-decode_test_dav1d = ["dav1d-sys"]
+decode_test = ["aom-sys", "pastey"]
+decode_test_dav1d = ["dav1d-sys", "pastey"]
 default = ["threading"]
-asm = ["nasm-rs", "cc", "av-scenechange/asm"]
+asm = ["nasm-rs", "cc", "libc", "pastey"]
 threading = ["dep:rayon"]
 quick_test = []
 desync_finder = ["backtrace"]
 check_asm = []
 tracing = ["profiling/profile-with-tracing"]
-serialize = [
-  "serde",
-  "v_frame/serialize",
-  "serde-big-array",
-  "av1-grain/serialize",
-]
+serialize = ["serde", "serde-big-array", "arrayvec/serde"]
 
 # Enables debug dumping of lookahead computation results, specifically:
 # - i-qres.png: quarter-resolution luma planes,
@@ -49,28 +44,24 @@ serialize = [
 dump_lookahead_data = ["byteorder", "image"]
 
 [dependencies]
-av-scenechange = { version = "0.14.1", default-features = false }
 bitstream-io = "4.10"
 cfg-if = "1.0"
-libc = "0.2"
+libc = { version = "0.2", optional = true }
 backtrace = { version = "0.3", optional = true }
 num-traits = "0.2"
 num-derive = "0.4"
-pastey = "0.1.0"
+pastey = { version = "0.2", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 dav1d-sys = { version = "0.7.0", package = "libdav1d-sys", optional = true }
 aom-sys = { version = "0.3.3", optional = true }
-v_frame = "0.3.7"
 rayon = { version = "1.10", optional = true }
 arrayvec = "0.7"
 thiserror = "2.0"
 byteorder = { version = "1.5.0", optional = true }
 log = "0.4"
 itertools = "0.14"
-av1-grain = "0.2.3"
 serde-big-array = { version = "0.5.1", optional = true }
 profiling = { version = "1" }
-aligned-vec = "0.6.0"
 
 [dependencies.image]
 version = "0.25.0"
@@ -121,6 +112,7 @@ strip = "symbols"
 
 [workspace]
 members = ["."]
+exclude = ["scripts/gate"]
 
 [package.metadata.docs.rs]
 no-default-features = true

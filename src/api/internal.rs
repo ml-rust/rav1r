@@ -14,6 +14,7 @@ use crate::api::{
   EncoderConfig, EncoderStatus, FrameType, Opaque, Packet, T35,
 };
 use crate::color::ChromaSampling::Cs400;
+use crate::cpu_features::CpuFeatureLevel;
 use crate::dist::get_satd;
 use crate::encoder::*;
 use crate::frame::*;
@@ -23,10 +24,10 @@ use crate::rate::{
   FRAME_SUBTYPE_SEF,
 };
 use crate::stats::EncoderStats;
+use crate::scenechange::SceneChangeDetector;
 use crate::tiling::Area;
 use crate::util::Pixel;
 use arrayvec::ArrayVec;
-use av_scenechange::SceneChangeDetector;
 use std::cmp;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -276,26 +277,11 @@ impl<T: Pixel> ContextInner<T> {
     let mut keyframe_detector = SceneChangeDetector::new(
       (enc.width, enc.height),
       enc.bit_depth,
-      av_scenechange::Rational32::new(
-        enc.time_base.den as i32,
-        enc.time_base.num as i32,
-      ),
-      enc.chroma_sampling,
       lookahead_distance,
-      match enc.speed_settings.scene_detection_mode {
-        super::SceneDetectionSpeed::Fast => {
-          av_scenechange::SceneDetectionSpeed::Fast
-        }
-        super::SceneDetectionSpeed::Standard => {
-          av_scenechange::SceneDetectionSpeed::Standard
-        }
-        super::SceneDetectionSpeed::None => {
-          av_scenechange::SceneDetectionSpeed::None
-        }
-      },
+      enc.speed_settings.scene_detection_mode,
       enc.min_key_frame_interval as usize,
       enc.max_key_frame_interval as usize,
-      av_scenechange::CpuFeatureLevel::default(),
+      CpuFeatureLevel::default(),
     );
     keyframe_detector.enable_cache();
 

@@ -16,7 +16,7 @@ use crate::tiling::{PlaneRegion, PlaneRegionMut};
 use crate::transform::TxSize;
 use crate::Pixel;
 use std::mem::MaybeUninit;
-use v_frame::pixel::PixelType;
+use crate::frame_buffer::pixel::PixelType;
 
 macro_rules! decl_angular_ipred_fn {
   ($($f:ident),+) => {

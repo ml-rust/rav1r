@@ -88,7 +88,10 @@ mod token_cdfs;
 
 mod api;
 mod frame;
+#[doc(hidden)]
+pub mod frame_buffer;
 mod header;
+mod scenechange;
 #[doc(hidden)]
 pub mod par;
 

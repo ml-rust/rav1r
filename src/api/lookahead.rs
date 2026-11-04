@@ -16,9 +16,9 @@ use crate::transform::TxSize;
 use crate::util::Aligned;
 use crate::Pixel;
 use std::sync::Arc;
-use v_frame::frame::Frame;
-use v_frame::pixel::CastFromPrimitive;
-use v_frame::plane::Plane;
+use crate::frame_buffer::frame::Frame;
+use crate::frame_buffer::pixel::CastFromPrimitive;
+use crate::frame_buffer::plane::Plane;
 
 pub(crate) const IMP_BLOCK_MV_UNITS_PER_PIXEL: i64 = 8;
 pub(crate) const IMP_BLOCK_SIZE_IN_MV_UNITS: i64 =

@@ -13,8 +13,8 @@ mod kmeans;
 mod logexp;
 mod uninit;
 
-pub use v_frame::math::*;
-pub use v_frame::pixel::*;
+pub use crate::frame_buffer::math::*;
+pub use crate::frame_buffer::pixel::*;
 
 pub use align::*;
 pub use cdf::*;
