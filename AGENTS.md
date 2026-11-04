@@ -40,11 +40,12 @@ AV1 encoder for the ml-rust stack. rav1r derives from rav1e (xiph/rav1e), base c
 
 ## Commands
 
-- `cargo clippy --all-targets -- -D warnings`
-- `cargo clippy --all-targets --no-default-features -- -D warnings`
+- `cargo clippy --all-targets --no-default-features --features <set> -- -D warnings`, for no features, `threading`, `asm`, and `serialize`
 - `cargo nextest run --no-fail-fast`
 - `cargo nextest run --no-default-features --no-fail-fast`
+- `cargo test --doc`
+- `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features --features threading,serialize`
 - `cargo fmt --all --check`
 - `cargo deny --exclude-dev check`
-- `cargo test --doc`
+- `shellcheck scripts/ci/*.sh scripts/gate/*.sh`
 - `scripts/gate/build_upstream.sh`, then `RAV1R_GATE_DIR=~/.cache/rav1r-gate/packets cargo test --test upstream_gate -- --nocapture`

@@ -2,9 +2,14 @@
 
 rav1r is the AV1 encoder of the ml-rust media stack. It derives from rav1e and stays mergeable with it. [AGENTS.md](AGENTS.md) holds the placement rules and invariants.
 
+## Before you start
+
+Open an issue before you start anything non-trivial. Discuss design on [Discord](https://discord.gg/jBhFk9kHPg).
+
 ## Toolchain
 
 - Stable Rust, version 1.85 or later.
+- `cargo-deny` and `shellcheck` for the checks.
 - NASM 2.15 or newer on `x86_64`, or a C compiler on `aarch64`. Only `asm` and the gate's reference build need them.
 
 ## Conventions
@@ -20,16 +25,19 @@ rav1r is the AV1 encoder of the ml-rust media stack. It derives from rav1e and s
 ## Checks
 
 ```sh
-cargo clippy --all-targets -- -D warnings
 cargo clippy --all-targets --no-default-features -- -D warnings
+cargo clippy --all-targets --no-default-features --features threading -- -D warnings
 cargo clippy --all-targets --no-default-features --features asm -- -D warnings
 cargo clippy --all-targets --no-default-features --features serialize -- -D warnings
 cargo test --no-fail-fast
 cargo test --no-default-features --no-fail-fast
 cargo fmt --all --check
 cargo deny --exclude-dev check
-cargo doc --no-deps --no-default-features --features threading,serialize
+shellcheck scripts/ci/*.sh scripts/gate/*.sh
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features --features threading,serialize
 ```
+
+CI also checks the library on the MSRV in `Cargo.toml`.
 
 Encode-decode tests need libaom and libdav1d:
 
@@ -41,7 +49,23 @@ cargo test --release --features decode_test_dav1d --lib -- test_encode_decode
 
 ## Decode-back tests
 
-`tests/decode_back.rs` proves that independent decoders reproduce the encoder's own reconstruction. Each case encodes a seeded clip, writes an IVF file under `CARGO_TARGET_TMPDIR`, decodes it with a command line tool, and compares every plane byte for byte with `Packet.rec`. The matrix covers speeds 0 to 10, 8 and 10 bit, odd sizes, tiles, worker counts, key frame intervals, low latency, quantizer mode, and bitrate mode.
+`tests/decode_back.rs` proves that independent decoders reproduce the encoder's own reconstruction. Each case runs these steps:
+
+1. Encodes a seeded clip.
+2. Writes an IVF file under `CARGO_TARGET_TMPDIR`.
+3. Decodes it with a command line tool.
+4. Compares every plane byte for byte with `Packet.rec`.
+
+The matrix covers:
+
+- speeds 0 to 10
+- 8 and 10 bit
+- odd sizes
+- tiles
+- worker counts
+- key frame intervals
+- low latency
+- quantizer mode and bitrate mode
 
 | Test | Decoder |
 | --- | --- |
@@ -68,7 +92,10 @@ The gate proves that rav1r encodes the same bytes as upstream. Run it for every 
    scripts/gate/build_upstream.sh
    ```
 
-   The script builds upstream at the pinned commit under `~/.cache/rav1r-gate/`, and it needs network access and NASM on `x86_64`. Upstream's `asm` feature stays off. Upstream always builds the `asm` feature of `av-scenechange`, so the reference encoder sets `CPU_TARGET=RUST` and checks that the setting took effect.
+   - The script builds upstream at the pinned commit under `~/.cache/rav1r-gate/`.
+   - It needs network access, and NASM on `x86_64`.
+   - Upstream's `asm` feature stays off.
+   - Upstream always builds the `asm` feature of `av-scenechange`. So the reference encoder sets `CPU_TARGET=RUST` and checks that the setting took effect.
 
 2. Compare, once per feature set:
 
@@ -85,15 +112,24 @@ With `RAV1R_GATE_DIR` unset, the test prints a skip notice and returns. CI runs 
 
 ## Merging upstream
 
-1. Run `git fetch upstream` and `git merge upstream/master`.
-2. Resolve a conflict at a removal site by keeping the removal. Drop any part that re-adds a removed binary, feature, or dependency.
-3. Apply upstream changes to `v_frame`, `av-scenechange`, or `av1-grain` by hand to `src/frame_buffer/`, `src/scenechange/`, or `src/api/config/grain.rs`.
-4. Set the merged commit in `scripts/gate/Cargo.toml` and `scripts/gate/build_upstream.sh`, then run the gate.
-5. Name any upstream change that alters the bitstream in the merge commit. Any other mismatch blocks the merge.
+1. Add the remote once: `git remote add upstream https://github.com/xiph/rav1e`.
+2. Run `git fetch upstream` and `git merge upstream/master`.
+3. Resolve a conflict at a removal site by keeping the removal. Drop any part that re-adds a removed binary, feature, or dependency.
+4. Keep `rustfmt.toml`, and do not reformat files.
+5. Apply upstream changes to `v_frame`, `av-scenechange`, or `av1-grain` by hand to `src/frame_buffer/`, `src/scenechange/`, or `src/api/config/grain.rs`.
+6. Set the merged commit in `scripts/gate/Cargo.toml` and `scripts/gate/build_upstream.sh`, then run the gate.
+7. Name any upstream change that alters the bitstream in the merge commit. Any other mismatch blocks the merge.
+8. Run the [checks](#checks), with default features and with `asm`.
 
 ## Assembly level
 
 `RAV1E_CPU_TARGET` lowers the assembly level at run time. `RAV1E_CPU_TARGET=rust` turns off all hand-written assembly. `src/cpu_features` lists the levels for each platform.
+
+## Pull requests
+
+- Add tests for every behavior change.
+- Add a line to `CHANGELOG.md` for every user-visible change.
+- Run the [checks](#checks) before you open the pull request.
 
 ## Releases
 

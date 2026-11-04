@@ -9,15 +9,17 @@ rav1r keeps the rav1e encoder library and drops the command-line tools, the C AP
 </p>
 
 <p>
-  <a href="#origin"><strong>Origin</strong></a>
-  ·
-  <a href="#what-changed"><strong>What changed</strong></a>
-  ·
-  <a href="#features"><strong>Features</strong></a>
+  <a href="#status"><strong>Status</strong></a>
   ·
   <a href="#usage"><strong>Usage</strong></a>
   ·
-  <a href="#taking-upstream-fixes"><strong>Upstream fixes</strong></a>
+  <a href="#features"><strong>Features</strong></a>
+  ·
+  <a href="#what-differs-from-rav1e"><strong>What differs</strong></a>
+  ·
+  <a href="#origin"><strong>Origin</strong></a>
+  ·
+  <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
   ·
   <a href="#license-and-patents"><strong>License</strong></a>
 </p>
@@ -44,61 +46,17 @@ rav1r keeps the rav1e encoder library and drops the command-line tools, the C AP
 
 rav1r is the AV1 encoder of the ml-rust media stack. [vidr](https://github.com/ml-rust/vidr) calls it as a library. Frames go in through `Context::send_frame` and AV1 packets come out of `Context::receive_packet`. Muxing lives in [containr](https://github.com/ml-rust/containr).
 
-## Origin
+For the same input and config, rav1r encodes the same bytes as upstream rav1e. A test gate checks this on a fixed matrix of clips. The gate runs locally and not in CI. `asm` is off by default.
 
-rav1r derives from [rav1e](https://github.com/xiph/rav1e) at commit `31435de9d76fddd38f6dcc31d4014574cebb2092` of its `master` branch. [NOTICE](NOTICE) holds the attribution.
+## Status
 
-The published rav1e 0.8.1 fails `cargo deny`, and vidr's `deny.toml` denies git sources. So vidr cannot depend on upstream. This repository publishes its own crate.
+In development. rav1r has no release and no public repository yet. vidr reaches it through a local path patch.
 
-## What changed
-
-Removed, because vidr never calls it:
-
-| Removed                                                                          | Reason                                          |
-| -------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `rav1e` and `rav1e-ch` binaries, `clap`, and the other CLI dependencies          | rav1r is a library                              |
-| C API (`capi`, `cbindgen.toml`)                                                  | No C caller exists                              |
-| Channel API (`channel-api`) and `Config::with_parallel_gops`                     | Nothing uses it                                 |
-| Fuzz targets, benches, `tools/`, `cross/`                                        | Each pulls dependencies or toolchains in        |
-| IVF and Y4M code (`ivf/`, `y4m`)                                                 | Containers belong to containr                   |
-| wasm support (`wasm` feature, `wasm-bindgen`)                                    | vidr does not target wasm                       |
-| `built`, `simd_helpers`, `noop_proc_macro`, `arg_enum_proc_macro`, `maybe-rayon` | Stale. Small in-tree code replaces each of them |
-| `v_frame`, `aligned-vec`, `av-scenechange`, `av1-grain`                         | Inlined. See below                              |
-
-Behaviour changes in the library:
-
-- `version::hash` is gone. `version::long` and `version::full` return the crate version.
-- The enums that derived `ArgEnum` keep `FromStr`, `Display`, and `variants()`. `variants()` returns a slice. `descriptions()` is gone.
-- `asm` is off by default.
-- With `threading` off, `rayon` is absent and the encoder runs on the calling thread.
-- `src/frame_buffer/` holds `v_frame`, with a small aligned allocation in place of `aligned-vec`. The frame, plane, and pixel types keep their paths in the rav1r API.
-- `src/scenechange/` holds the subset of `av-scenechange` the encoder calls. Scene detection uses rav1r's own SATD. Its SAD for fast detection is Rust only, and `CPU_TARGET` no longer applies to it. `RAV1E_CPU_TARGET` applies instead. Output is unchanged.
-- `src/api/config/grain.rs` holds the film grain types of `av1-grain`. `generate_photon_noise_params`, `parse_grain_table`, `write_grain_table`, `DiffGenerator`, and the `TransferFunction` conversion methods are gone from the prelude.
-
-Kept on purpose: 12-bit, 4:2:2 and 4:4:4 in the encoder. They keep merges from upstream small.
-
-## Features
-
-| Feature             | What it does                                                               |
-| ------------------- | -------------------------------------------------------------------------- |
-| `threading`         | Default. Uses `rayon` for tile and lookahead parallelism                   |
-| `asm`               | Builds the hand-written assembly. Needs NASM 2.15 or newer on `x86_64`, and a C compiler on `aarch64` |
-| `serialize`         | `serde` support for the config and stats types                             |
-| `unstable`          | `Config::with_thread_pool`                                                 |
-| `tracing`           | Emits profiling spans through `tracing`                                    |
-| `dump_lookahead_data` | Writes lookahead debug data to disk                                      |
-| `desync_finder`     | Entropy coder desync debugging                                             |
-| `check_asm`         | Compares each assembly routine with the Rust routine                       |
-| `decode_test`, `decode_test_dav1d` | Decode with libaom or dav1d in tests                        |
-| `quick_test`        | Shortens the encode-decode tests                                           |
-
-The default build needs only a Rust toolchain, version 1.85 or later. The `asm` feature links the objects under `src/x86` and `src/arm`. Their headers name VideoLAN, the dav1d authors, Two Orioles, and Martin Storsjo, among others, and they stay in place.
+Minimum Rust version: 1.85.
 
 ## Usage
 
-```bash
-cargo add rav1r
-```
+This example shows the API. It encodes one blank frame:
 
 ```rust,no_run
 use rav1r::prelude::*;
@@ -122,15 +80,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 [`examples/simple_encoding.rs`](examples/simple_encoding.rs) shows a longer run. [`doc/`](doc/README.md) holds the upstream design notes.
 
-## Taking upstream fixes
+## Features
 
-The `upstream` remote points at `https://github.com/xiph/rav1e`.
+The default build needs only a Rust toolchain.
 
-1. Run `git fetch upstream` and merge `upstream/master`.
-2. Resolve each conflict at a removal site by keeping the removal. Keep `rustfmt.toml` and do not reformat files.
-3. Set the merged commit in `scripts/gate/Cargo.toml` and `scripts/gate/build_upstream.sh`, then run the script.
-4. Run `tests/upstream_gate.rs` as [CONTRIBUTING.md](CONTRIBUTING.md) describes. The packet bytes must match. A change that alters the bitstream gets named in the merge commit.
-5. Run the checks in [AGENTS.md](AGENTS.md), with default features and with `asm`.
+| Feature | What it adds | Default |
+| ------- | ------------ | ------- |
+| `threading` | `rayon` for tile and lookahead parallelism | Yes |
+| `asm` | Hand-written assembly. Needs NASM 2.15 or newer on `x86_64`, or a C compiler on `aarch64` | No |
+| `serialize` | `serde` support for the config and stats types | No |
+| `unstable` | `Config::with_thread_pool` | No |
+| `tracing` | Profiling spans through `tracing` | No |
+| `dump_lookahead_data` | Lookahead debug data written to disk | No |
+| `desync_finder` | Entropy coder desync debugging | No |
+| `check_asm` | A comparison of each assembly routine with the Rust routine | No |
+| `decode_test`, `decode_test_dav1d` | Decode with libaom or dav1d in tests | No |
+| `quick_test` | Shorter encode-decode tests | No |
+
+`asm` links the objects under `src/x86` and `src/arm`. Their headers name VideoLAN, the dav1d authors, Two Orioles, and Martin Storsjo, among others, and they stay in place.
+
+## What differs from rav1e
+
+### Removed
+
+| Removed | Reason |
+| ------- | ------ |
+| `rav1e` and `rav1e-ch` binaries, `clap`, and the other CLI dependencies | rav1r is a library |
+| C API (`capi`, `cbindgen.toml`) | No C caller exists |
+| Channel API (`channel-api`) and `Config::with_parallel_gops` | Nothing uses it |
+| Fuzz targets, benches, `tools/`, `cross/` | Each pulls in dependencies or toolchains |
+| IVF and Y4M code (`ivf/`, `y4m`) | Containers belong to containr |
+| wasm support (`wasm` feature, `wasm-bindgen`) | vidr does not target wasm |
+| `built`, `simd_helpers`, `noop_proc_macro`, `arg_enum_proc_macro`, `maybe-rayon` | Stale. Small in-tree code replaces each |
+| `v_frame`, `aligned-vec`, `av-scenechange`, `av1-grain` | Inlined. See the next table |
+
+### Inlined
+
+| Source | Now in | Effect on the API |
+| ------ | ------ | ----------------- |
+| `v_frame`, `aligned-vec` | `src/frame_buffer/` | None. Frame, plane, and pixel types keep their paths |
+| `av-scenechange` | `src/scenechange/`, the subset the encoder calls | Scene detection uses rav1r's own SATD. Its SAD for fast detection is Rust only. `RAV1E_CPU_TARGET` applies, and `CPU_TARGET` does not. Output is unchanged |
+| `av1-grain` | `src/api/config/grain.rs`, the film grain types | `generate_photon_noise_params`, `parse_grain_table`, `write_grain_table`, `DiffGenerator`, and the `TransferFunction` conversion methods are gone from the prelude |
+
+### Changed
+
+- `version` module: `version::hash` is gone. `version::long` and `version::full` return the crate version.
+- Enums that derived `ArgEnum`: they keep `FromStr`, `Display`, and `variants()`. `variants()` returns a slice. `descriptions()` is gone.
+- `asm`: off by default.
+- `threading`: with it off, `rayon` is absent and the encoder runs on the calling thread.
+
+### Kept
+
+12-bit, 4:2:2, and 4:4:4 stay in the encoder, because they keep merges from upstream small.
+
+## Origin
+
+rav1r derives from [rav1e](https://github.com/xiph/rav1e) at commit `31435de9d76fddd38f6dcc31d4014574cebb2092` of its `master` branch. [NOTICE](NOTICE) holds the attribution.
+
+The published rav1e 0.8.1 fails `cargo deny`, and vidr's `deny.toml` denies git sources. So vidr cannot depend on upstream. rav1r is a separate crate that vidr depends on.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions, checks, and merging from upstream.
+
+Questions and design discussion happen on [Discord](https://discord.gg/jBhFk9kHPg).
 
 ## License and patents
 
