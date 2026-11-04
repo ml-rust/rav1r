@@ -1,4 +1,6 @@
-# rav1e docs
+# rav1r docs
+
+The notes come from upstream rav1e, so they name the encoder rav1e.
 
 <details>
 <summary><b>Table of Content</b></summary>
@@ -18,7 +20,7 @@
 _**NOTE:** Headline may link to page._
 
 ## [../Readme](../README.md)
-Main README of rav1e.
+Main README of rav1r.
 
 ## [AOMAnalyzer](AOM_ANALYZER.md)
 Analyze `.ivf`-files with `AOM Analyzer`:
@@ -64,10 +66,8 @@ quantizer.
 - Overview of `src/*`
 
 ## Versioning
-rav1e follows Cargo's versioning scheme: https://doc.rust-lang.org/cargo/reference/manifest.html#the-version-field
+rav1r follows Cargo's versioning scheme: https://doc.rust-lang.org/cargo/reference/manifest.html#the-version-field
 
-Because rav1e is not yet at version 1.0.0, all changes that break the API require a minor-version bump.
+Because rav1r is not yet at version 1.0.0, all changes that break the API require a minor-version bump.
 
-The API is defined as:
-- public functions in src/api.rs
-- command line parameters to the rav1e binary
+The API is defined as the public functions in src/api/.

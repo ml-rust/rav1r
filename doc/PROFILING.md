@@ -1,4 +1,4 @@
-# Profiling rav1e
+# Profiling rav1r
 
 <details>
 <summary><b>Table of Content</b></summary>
@@ -25,7 +25,7 @@ platform that has `dtrace` or `perf` support.
 
 ```
 $ cargo install flamegraph
-$ cargo flamegraph -o flame.svg -b rav1e -- ~/sample.y4m -o /dev/null
+$ cargo flamegraph -o flame.svg --example simple_encoding
 $ $browser flame.svg
 ```
 
@@ -38,7 +38,7 @@ and integrates neatly with the XCode UI.
 
 ```
 $ cargo install cargo-instruments
-$ cargo instruments --release --open --bin rav1e -- ~/sample.y4m -o /dev/null
+$ cargo instruments --release --open --example simple_encoding
 ```
 
 ## Generic profiling
@@ -49,8 +49,8 @@ Most common linux-specific profiler, to use the callgraphs you need dwarf
 debug symbols.
 
 ```
-$ cargo build --release
-$ perf record --call-graph dwarf target/release/rav1e ~/sample.y4m -o /dev/null
+$ cargo build --release --example simple_encoding
+$ perf record --call-graph dwarf target/release/examples/simple_encoding
 $ perf report
 ```
 
@@ -62,8 +62,8 @@ $ perf report
 It leverages the `mcount` instrumentation.
 
 ```
-$ cargo rustc --release --bin rav1e -- -Z instrument-mcount
-$ uftrace record --no-libcall -D 5 target/release/rav1e ~/sample.y4m -o /dev/null
+$ cargo rustc --release --example simple_encoding -- -Z instrument-mcount
+$ uftrace record --no-libcall -D 5 target/release/examples/simple_encoding
 $ uftrace report
 ```
 
@@ -89,5 +89,5 @@ Simple setup:
   - If the function doesn't appear, it may be inlined by the compiler.
     You can temporarily add `#[inline(never)]` to the function
     to bypass this issue.
-- Generate ASM for your function: `cargo asm rav1e::rdo::cdef_dist_wxh > out.asm`
+- Generate ASM for your function: `cargo asm rav1r::rdo::cdef_dist_wxh > out.asm`
   you can enter full function name, pattern or sequential number

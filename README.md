@@ -63,13 +63,17 @@ Removed, because vidr never calls it:
 | IVF and Y4M code (`ivf/`, `y4m`)                                                 | Containers belong to containr                   |
 | wasm support (`wasm` feature, `wasm-bindgen`)                                    | vidr does not target wasm                       |
 | `built`, `simd_helpers`, `noop_proc_macro`, `arg_enum_proc_macro`, `maybe-rayon` | Stale. Small in-tree code replaces each of them |
+| `v_frame`, `aligned-vec`, `av-scenechange`, `av1-grain`                         | Inlined. See below                              |
 
 Behaviour changes in the library:
 
 - `version::hash` is gone. `version::long` and `version::full` return the crate version.
 - The enums that derived `ArgEnum` keep `FromStr`, `Display`, and `variants()`. `variants()` returns a slice. `descriptions()` is gone.
-- `asm` is off by default and it also controls `av-scenechange/asm`.
+- `asm` is off by default.
 - With `threading` off, `rayon` is absent and the encoder runs on the calling thread.
+- `src/frame_buffer/` holds `v_frame`, with a small aligned allocation in place of `aligned-vec`. The frame, plane, and pixel types keep their paths in the rav1r API.
+- `src/scenechange/` holds the subset of `av-scenechange` the encoder calls. Scene detection uses rav1r's own SATD. Its SAD for fast detection is Rust only, and `CPU_TARGET` no longer applies to it. `RAV1E_CPU_TARGET` applies instead. Output is unchanged.
+- `src/api/config/grain.rs` holds the film grain types of `av1-grain`. `generate_photon_noise_params`, `parse_grain_table`, `write_grain_table`, `DiffGenerator`, and the `TransferFunction` conversion methods are gone from the prelude.
 
 Kept on purpose: 12-bit, 4:2:2 and 4:4:4 in the encoder. They keep merges from upstream small.
 
@@ -122,10 +126,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The `upstream` remote points at `https://github.com/xiph/rav1e`.
 
-1. Encode the reference clips on the current build and keep the packet bytes.
-2. Run `git fetch upstream` and merge `upstream/master`.
-3. Resolve each conflict at a removal site by keeping the removal. Keep `rustfmt.toml` and do not reformat files.
-4. Encode the same clips with the same config and thread count. The packet bytes must match. A change that alters the bitstream gets named in the merge commit.
+1. Run `git fetch upstream` and merge `upstream/master`.
+2. Resolve each conflict at a removal site by keeping the removal. Keep `rustfmt.toml` and do not reformat files.
+3. Set the merged commit in `scripts/gate/Cargo.toml` and `scripts/gate/build_upstream.sh`, then run the script.
+4. Run `tests/upstream_gate.rs` as [CONTRIBUTING.md](CONTRIBUTING.md) describes. The packet bytes must match. A change that alters the bitstream gets named in the merge commit.
 5. Run the checks in [AGENTS.md](AGENTS.md), with default features and with `asm`.
 
 ## License and patents

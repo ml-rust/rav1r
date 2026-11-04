@@ -1,148 +1,81 @@
-# Contributing to rav1e
+# Contributing to rav1r
 
-## Development Container
-
-To get started quickly, contributors may use the [rav1e-devcontainer](https://ghcr.io/xiph/rav1e-devcontainer) image which includes the tools referenced in this guide. It can be launched from GitHub in a [*new Codespace*](https://github.com/codespaces/new?repo=xiph/rav1e). It can also be run locally with [VS Code and the Dev Containers extension](https://code.visualstudio.com/docs/devcontainers/containers#_getting-started) or via the [Dev Container CLI](https://www.npmjs.com/package/@devcontainers/cli).
+rav1r is the AV1 encoder of the ml-rust media stack. It derives from rav1e and stays mergeable with it. [AGENTS.md](AGENTS.md) holds the placement rules and invariants.
 
 ## Toolchain
 
-rav1e uses the stable version of Rust (the stable toolchain).
+- Stable Rust, version 1.85 or later.
+- NASM 2.15 or newer on `x86_64`, or a C compiler on `aarch64`. Only `asm` and the gate's reference build need them.
 
-To install the toolchain:
+## Conventions
 
-```sh
-rustup install stable
-```
+- Keep each edit minimal at its site. Change the lines that need it and no others.
+- Never run `cargo fmt` across the tree to reformat it. Run `rustfmt` only on a file you rewrote substantially or created. `rustfmt.toml` sets 2 spaces and width 79.
+- Keep `LICENSE`, `PATENTS`, and every per-file header. Keep `NOTICE` current.
+- Keep the `rav1e_` assembly symbols. A merge from upstream needs them.
+- Make every optional capability a Cargo feature. `asm` stays out of `default`.
+- Add a dependency only if it has a release or commit in the last year.
+- Add no binary, C API, fuzz target, bench harness, or container code.
 
-## Coding style
-
-Format code with [rustfmt](https://github.com/rust-lang-nursery/rustfmt) 1.3.0 and above (distributed with Rust 1.37.0 and above) before submitting a PR.
-
-To install rustfmt:
-
-```sh
-rustup component add rustfmt
-```
-
-then
+## Checks
 
 ```sh
-cargo fmt
+cargo clippy --all-targets -- -D warnings
+cargo clippy --all-targets --no-default-features -- -D warnings
+cargo clippy --all-targets --no-default-features --features asm -- -D warnings
+cargo clippy --all-targets --no-default-features --features serialize -- -D warnings
+cargo test --no-fail-fast
+cargo test --no-default-features --no-fail-fast
+cargo fmt --all --check
+cargo deny --exclude-dev check
+cargo doc --no-deps --no-default-features --features threading,serialize
 ```
 
-## Code Analysis
-
-The [clippy](https://github.com/rust-lang-nursery/rust-clippy) will help catch common mistakes and improve your Rust code.
-
-We recommend you use it before submitting a PR.
-
-To install clippy:
-
-```sh
-rustup component add clippy
-```
-
-then you can run `cargo clippy` in place of `cargo check`.
-
-## Testing
-
-Run unit tests with:
-
-```sh
-cargo test
-```
-
-Encode-decode integration tests require libaom and libdav1d.
-
-Installation on Ubuntu:
+Encode-decode tests need libaom and libdav1d:
 
 ```sh
 sudo apt install libaom-dev libdav1d-dev
+cargo test --release --features decode_test --lib -- test_encode_decode
+cargo test --release --features decode_test_dav1d --lib -- test_encode_decode
 ```
 
-Installation on Fedora:
+## The byte-identical gate
 
-```sh
-sudo dnf install libaom-devel libdav1d-devel
-```
+The gate proves that rav1r encodes the same bytes as upstream. Run it for every change that can reach the encoder output.
 
-Run encode-decode integration tests against libaom with:
+1. Build the reference encoder and write its packets:
 
-```sh
-cargo test --release --features=decode_test --lib -- test_encode_decode
-```
+   ```sh
+   scripts/gate/build_upstream.sh
+   ```
 
-Run the encode-decode tests against `dav1d` with:
+   The script builds upstream at the pinned commit under `~/.cache/rav1r-gate/`, and it needs network access and NASM on `x86_64`. Upstream's `asm` feature stays off. Upstream always builds the `asm` feature of `av-scenechange`, so the reference encoder sets `CPU_TARGET=RUST` and checks that the setting took effect.
 
-```sh
-cargo test --release --features=decode_test_dav1d --lib -- test_encode_decode
-```
+2. Compare, once per feature set:
 
-Run regular benchmarks with:
+   ```sh
+   export RAV1R_GATE_DIR=~/.cache/rav1r-gate/packets
+   cargo test --no-default-features --test upstream_gate
+   cargo test --test upstream_gate
+   cargo test --features asm --test upstream_gate
+   ```
 
-```sh
-cargo install cargo-criterion
-cargo criterion --features=bench
-```
+With `RAV1R_GATE_DIR` unset, the test prints a skip notice and returns. CI runs it that way. `threading` builds compare with `threading` packets, and other builds compare with `sequential` packets.
 
-## Reviews
+`scripts/gate/clips.rs` holds the matrix and a seeded generator, and both sides compile it. No media enters the repository. Rerun the script after any change to that file.
 
-Commits which change coding efficiency should include a link to AWCY and results summary in their commit message.
+## Merging upstream
 
-PRs must be reviewed by at least one other collaborator. Once they are reviewed and pass CI, anyone may merge (though it's convention for the author to if they have permissions).
+1. Run `git fetch upstream` and `git merge upstream/master`.
+2. Resolve a conflict at a removal site by keeping the removal. Drop any part that re-adds a removed binary, feature, or dependency.
+3. Apply upstream changes to `v_frame`, `av-scenechange`, or `av1-grain` by hand to `src/frame_buffer/`, `src/scenechange/`, or `src/api/config/grain.rs`.
+4. Set the merged commit in `scripts/gate/Cargo.toml` and `scripts/gate/build_upstream.sh`, then run the gate.
+5. Name any upstream change that alters the bitstream in the merge commit. Any other mismatch blocks the merge.
 
-PRs should be landed by rebasing. All fixup commits should be squashed before merging.
+## Assembly level
 
-## Fuzzing
+`RAV1E_CPU_TARGET` lowers the assembly level at run time. `RAV1E_CPU_TARGET=rust` turns off all hand-written assembly. `src/cpu_features` lists the levels for each platform.
 
-Install `cargo-fuzz` with `cargo install cargo-fuzz`. Running fuzz targets with stable Rust requires `--sanitizer=none` or the shorter `-s none`.
+## Releases
 
-* List the fuzz targets with `cargo fuzz list`.
-* Run a fuzz target with `cargo fuzz run --sanitizer=none <target>`.
-  * Parallel fuzzing: `cargo fuzz run -s none --jobs <n> <target> -- -workers=<n>`.
-  * Bump the "slow unit" time limit: `cargo fuzz run -s none <target> -- -report_slow_units=600`.
-  * Make the fuzzer generate long inputs right away: `cargo fuzz run -s none <target> -- -max_len=256 -len_control=0`.
-  * Release configuration (recommended only for `encode_decode` because it disables debug assertions and integer overflow assertions): `cargo fuzz run -s none --release <target>`
-  * Just give me the complete command line: `cargo fuzz run -s none -j10 encode -- -workers=10 -timeout=600 -report_slow_units=600 -max_len=256 -len_control=0`.
-* Run a single artifact with debug output: `RUST_LOG=debug <path/to/fuzz/target/executable> <path/to/artifact>`, for example, `RUST_LOG=debug fuzz/target/x86_64-unknown-linux-gnu/debug/encode fuzz/artifacts/encode/crash-2f5672cb76691b989bbd2022a5349939a2d7b952`.
-* For adding new fuzz targets, see comment at the top of `src/fuzzing.rs`.
-
-### Fuzzing with sanitizers
-
-Running fuzz targets with a sanitizer requires nightly Rust, so install that too with `rustup install nightly`.
-
-* Run a fuzz target with `cargo +nightly fuzz run <target>`. The address sanitizer is the default.
-  * Disable memory leak detection (enabled by default for address and leak sanitizers): `cargo fuzz +nightly run <target> -- -detect_leaks=0`.
-
-## Finding Desyncs
-
-1. Encode the input video using rav1e.
-```
-/path/to/rav1e in.y4m -o out.ivf -r rec.y4m ${options}
-```
-
-2. Decode the output of rav1e using [dav1d](https://code.videolan.org/videolan/dav1d).
-```
-/path/to/dav1d -i out.ivf -o dec.y4m
-```
-
-3. Remove the y4m sequence header to see the difference in frame header or data
-```
-tail -n+2 rec.y4m > rec
-tail -n+2 dec.y4m > dec
-```
-
-4. Compare if the reconstruction and decoded video match.
-```
-cmp rec dec
-```
-
-## Setting Assembly Optimization Level
-
-rav1e defaults to using the highest assembly optimization level supported on the current machine.
-You can disable assembly or use a lower assembly target at runtime by setting the environment variable `RAV1E_CPU_TARGET`.
-
-For example, `RAV1E_CPU_TARGET=rust` will disable all hand-written assembly optimizations.
-`RAV1E_CPU_TARGET=sse2` will enable SSE2 code but disable any newer assembly.
-
-A full list of options can be found in the `CpuFeatureLevel` enum in `src/cpu_features` for your platform.
+Each release needs a non-empty `## [X.Y.Z]` section in `CHANGELOG.md`. A pushed `v*` tag runs the checks in `Release Prepare`. The manual `Release` workflow publishes.
