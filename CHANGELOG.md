@@ -19,3 +19,4 @@ Changed:
 Added:
 
 - `tests/upstream_gate.rs` and `scripts/gate/`: a gate that compares packet bytes with upstream.
+- `tests/decode_back.rs`: encodes seeded clips and checks that `dav1d`, `aomdec`, and `ffmpeg` decode them to the encoder's own reconstruction.

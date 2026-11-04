@@ -13,6 +13,8 @@
 //! file. Each one names its encoder as `enc`: rav1r in the test, upstream rav1e
 //! in the reference. A change here changes both sides, so rerun
 //! `scripts/gate/build_upstream.sh` after it.
+//!
+//! `tests/decode_back.rs` also includes this file, for `Case` and `fill_frame`.
 
 use super::enc::{
   ChromaSampling, Config, Context, EncoderConfig, EncoderStatus, Pixel,
@@ -24,17 +26,17 @@ const THREADS: usize = 2;
 
 /// One encode: a clip and the config that encodes it.
 pub struct Case {
-  width: usize,
-  height: usize,
-  bit_depth: usize,
-  speed: u8,
-  low_latency: bool,
+  pub width: usize,
+  pub height: usize,
+  pub bit_depth: usize,
+  pub speed: u8,
+  pub low_latency: bool,
   /// The target bitrate. Zero selects quantizer mode.
-  bitrate: i32,
-  tile_cols: usize,
-  tile_rows: usize,
-  frames: u32,
-  seed: u32,
+  pub bitrate: i32,
+  pub tile_cols: usize,
+  pub tile_rows: usize,
+  pub frames: u32,
+  pub seed: u32,
 }
 
 impl Case {
@@ -128,7 +130,7 @@ fn sample(case: &Case, frame: u32, plane: u32, x: u32, y: u32) -> u32 {
 }
 
 /// Fills `frame` with frame number `index` of the clip.
-fn fill_frame<T: Pixel>(
+pub fn fill_frame<T: Pixel>(
   case: &Case, frame: &mut super::enc::Frame<T>, index: u32,
 ) {
   let bytes_per_sample = if case.bit_depth > 8 { 2 } else { 1 };

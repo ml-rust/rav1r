@@ -39,6 +39,25 @@ cargo test --release --features decode_test --lib -- test_encode_decode
 cargo test --release --features decode_test_dav1d --lib -- test_encode_decode
 ```
 
+## Decode-back tests
+
+`tests/decode_back.rs` proves that independent decoders reproduce the encoder's own reconstruction. Each case encodes a seeded clip, writes an IVF file under `CARGO_TARGET_TMPDIR`, decodes it with a command line tool, and compares every plane byte for byte with `Packet.rec`. The matrix covers speeds 0 to 10, 8 and 10 bit, odd sizes, tiles, worker counts, key frame intervals, low latency, quantizer mode, and bitrate mode.
+
+| Test | Decoder |
+| --- | --- |
+| `a10_dav1d` | `dav1d` |
+| `a11_aomdec` | `aomdec` |
+| `a12_ffmpeg` | `ffmpeg` with `libdav1d` and with `libaom-av1` |
+
+A decoder missing from `PATH` skips its test and prints a notice. Run it once per feature set:
+
+```sh
+cargo test --release --test decode_back -- --nocapture
+cargo test --release --no-default-features --test decode_back -- --nocapture
+```
+
+The test needs no feature flag, no network, and no media. It shares `scripts/gate/clips.rs` with the gate.
+
 ## The byte-identical gate
 
 The gate proves that rav1r encodes the same bytes as upstream. Run it for every change that can reach the encoder output.
