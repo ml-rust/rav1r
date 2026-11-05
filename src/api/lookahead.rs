@@ -7,6 +7,9 @@ use crate::encoder::{
   FrameInvariants, FrameState, Sequence, IMPORTANCE_BLOCK_SIZE,
 };
 use crate::frame::{AsRegion, PlaneOffset};
+use crate::frame_buffer::frame::Frame;
+use crate::frame_buffer::pixel::CastFromPrimitive;
+use crate::frame_buffer::plane::Plane;
 use crate::me::{estimate_tile_motion, RefMEStats};
 use crate::par::iter::*;
 use crate::partition::{get_intra_edges, BlockSize};
@@ -16,9 +19,6 @@ use crate::transform::TxSize;
 use crate::util::Aligned;
 use crate::Pixel;
 use std::sync::Arc;
-use crate::frame_buffer::frame::Frame;
-use crate::frame_buffer::pixel::CastFromPrimitive;
-use crate::frame_buffer::plane::Plane;
 
 pub(crate) const IMP_BLOCK_MV_UNITS_PER_PIXEL: i64 = 8;
 pub(crate) const IMP_BLOCK_SIZE_IN_MV_UNITS: i64 =

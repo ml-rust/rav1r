@@ -231,10 +231,7 @@ pub enum PixelRange {
   Full,
 }
 
-arg_enum!(PixelRange {
-  Limited,
-  Full,
-});
+arg_enum!(PixelRange { Limited, Full });
 
 /// High dynamic range content light level
 ///

@@ -8,6 +8,7 @@
 // PATENTS file, you can obtain it at www.aomedia.org/license/patent.
 
 use crate::cpu_features::CpuFeatureLevel;
+use crate::frame_buffer::pixel::PixelType;
 use crate::partition::{BlockSize, IntraEdge};
 use crate::predict::{
   rust, IntraEdgeFilterParameters, PredictionMode, PredictionVariant,
@@ -16,7 +17,6 @@ use crate::tiling::{PlaneRegion, PlaneRegionMut};
 use crate::transform::TxSize;
 use crate::Pixel;
 use std::mem::MaybeUninit;
-use crate::frame_buffer::pixel::PixelType;
 
 macro_rules! decl_angular_ipred_fn {
   ($($f:ident),+) => {

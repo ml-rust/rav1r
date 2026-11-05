@@ -15,7 +15,6 @@ use crate::transform::*;
 use crate::util::*;
 use std::mem::MaybeUninit;
 
-
 use core::arch::aarch64::*;
 
 #[derive(Clone, Copy)]
@@ -234,7 +233,10 @@ unsafe fn shift_right_neon<const SHIFT: i32>(a: I32X8) -> I32X8 {
 #[inline]
 unsafe fn round_shift_array_neon(arr: &mut [I32X8], bit: i8) {
   if arr.len() % 4 != 0 {
-    debug_assert!(false, "the array length is not a multiple of the vector size");
+    debug_assert!(
+      false,
+      "the array length is not a multiple of the vector size"
+    );
     // SAFETY: every caller passes a length that is a multiple of the vector size.
     unsafe { std::hint::unreachable_unchecked() }
   }

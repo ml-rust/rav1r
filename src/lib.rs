@@ -91,9 +91,9 @@ mod frame;
 #[doc(hidden)]
 pub mod frame_buffer;
 mod header;
-mod scenechange;
 #[doc(hidden)]
 pub mod par;
+mod scenechange;
 
 /// Commonly used types and traits.
 pub mod prelude {
@@ -209,8 +209,5 @@ pub mod version {
     short()
   }
 }
-#[cfg(all(
-  test,
-  any(feature = "decode_test", feature = "decode_test_dav1d")
-))]
+#[cfg(all(test, any(feature = "decode_test", feature = "decode_test_dav1d")))]
 mod test_encode_decode;

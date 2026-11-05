@@ -23,8 +23,8 @@ use crate::rate::{
   RCState, FRAME_NSUBTYPES, FRAME_SUBTYPE_I, FRAME_SUBTYPE_P,
   FRAME_SUBTYPE_SEF,
 };
-use crate::stats::EncoderStats;
 use crate::scenechange::SceneChangeDetector;
+use crate::stats::EncoderStats;
 use crate::tiling::Area;
 use crate::util::Pixel;
 use arrayvec::ArrayVec;
