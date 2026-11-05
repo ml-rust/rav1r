@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-05
+
 First release. rav1r derives from [rav1e](https://github.com/xiph/rav1e) at commit `31435de9d76fddd38f6dcc31d4014574cebb2092`. rav1e's git history holds the changes before that commit.
 
 ### Removed
