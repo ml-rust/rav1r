@@ -1,4 +1,4 @@
-# Manual distribution workflow. Push a v* tag first; `Release Prepare` validates
+# Manual distribution workflow. Push a v* tag first. `Release Prepare` checks
 # the tag and runs the full suite. Then run this workflow with that tag.
 #
 # Stages:
