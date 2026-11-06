@@ -15,7 +15,9 @@ include = [
   "/src/**",
 ]
 license = "BSD-2-Clause"
-description = "AV1 encoder derived from rav1e"
+description = "AV1 video encoder library for Rust, derived from rav1e"
+keywords = ["av1", "video", "encoder", "rav1e", "codec"]
+categories = ["multimedia::video", "multimedia::encoding"]
 readme = "README.md"
 repository = "https://github.com/ml-rust/rav1r"
 
