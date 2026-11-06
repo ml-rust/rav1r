@@ -44,17 +44,27 @@ rav1r keeps the rav1e encoder library and drops the command-line tools, the C AP
 
 </div>
 
-rav1r is the AV1 encoder of the ml-rust media stack. [vidr](https://github.com/ml-rust/vidr) calls it as a library. Frames go in through `Context::send_frame` and AV1 packets come out of `Context::receive_packet`. Muxing lives in [containr](https://github.com/ml-rust/containr).
+rav1r is an AV1 video encoder library for Rust, derived from [rav1e](https://github.com/xiph/rav1e). The default build is pure Rust, and no Python is needed. rav1r is the AV1 encoder of the ml-rust media stack. [vidr](https://github.com/ml-rust/vidr) calls it as a library. Frames go in through `Context::send_frame` and AV1 packets come out of `Context::receive_packet`. Muxing lives in [containr](https://github.com/ml-rust/containr).
 
 For the same input and config, rav1r encodes the same bytes as upstream rav1e. A test gate checks this on a fixed matrix of clips. The gate runs locally and not in CI. `asm` is off by default.
 
 ## Status
 
-In development. rav1r has no release and no public repository yet. vidr reaches it through a local path patch.
+In development. Version 0.1.0 is on crates.io, and vidr depends on it.
 
 Minimum Rust version: 1.85.
 
+### Not supported yet
+
+- A command-line encoder. rav1r is a library.
+- A C API.
+- IVF and Y4M reading and writing. Use [containr](https://github.com/ml-rust/containr) for containers.
+- AV1 decode.
+- wasm builds.
+
 ## Usage
+
+Add the crate with `cargo add rav1r`, or `rav1r = "0.1"` in `Cargo.toml`.
 
 This example shows the API. It encodes one blank frame:
 
